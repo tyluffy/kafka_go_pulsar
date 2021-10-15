@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/apache/pulsar-client-go v0.6.0
-	github.com/paashzj/kafka_go v0.0.3
+	github.com/paashzj/kafka_go v0.0.4
 	k8s.io/klog/v2 v2.20.0
 )
 

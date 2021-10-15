@@ -2,7 +2,7 @@ package kafsar
 
 import (
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/paashzj/kafka_go/pkg/kafka/service"
+	"github.com/paashzj/kafka_go/pkg/service"
 	"net"
 )
 
