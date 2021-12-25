@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"kafka_go_pulsar/pkg/kafsar"
+	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
 )
 
 var logLevel = flag.String("v", "5", "log level")

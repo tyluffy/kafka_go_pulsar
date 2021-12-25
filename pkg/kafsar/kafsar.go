@@ -2,7 +2,7 @@ package kafsar
 
 import (
 	"github.com/paashzj/kafka_go/pkg/kafka"
-	"k8s.io/klog/v2"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -18,7 +18,7 @@ type PulsarConfig struct {
 }
 
 func Run(config *Config, impl Server) error {
-	klog.Info("kafsar started")
+	logrus.Info("kafsar started")
 	k := &KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig}
 	err := k.ConnPulsar()
 	if err != nil {
