@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/apache/pulsar-client-go v0.7.0
-	github.com/paashzj/kafka_go v0.0.5
+	github.com/paashzj/kafka_go v0.0.6-0.20220111025952-8f8fe83bde49
 	github.com/sirupsen/logrus v1.8.1
 )
 
@@ -20,7 +20,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dvsekhvalnov/jose2go v0.0.0-20180829124132-7f401d37b68a // indirect
-	github.com/go-logr/logr v1.1.0 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
@@ -55,5 +54,4 @@ require (
 	google.golang.org/protobuf v1.23.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/klog/v2 v2.20.0 // indirect
 )
