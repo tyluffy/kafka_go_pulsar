@@ -5,8 +5,6 @@ import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
 )
 
-var logLevel = flag.String("v", "5", "log level")
-
 var listenAddr = flag.String("kafka_listen_addr", "0.0.0.0", "kafka listen addr")
 var multiCore = flag.Bool("kafka_multi_core", false, "multi core")
 var needSasl = flag.Bool("kafka_need_sasl", false, "need sasl")
@@ -23,7 +21,6 @@ var pulsarTcpPort = flag.Int("pulsar_tcp_port", 6650, "pulsar tcp port")
 func main() {
 	flag.Parse()
 	config := &kafsar.Config{}
-	config.LogLevel = *logLevel
 	config.KafkaConfig.ListenAddr = *listenAddr
 	config.KafkaConfig.MultiCore = *multiCore
 	config.KafkaConfig.NeedSasl = *needSasl

@@ -6,7 +6,6 @@ import (
 )
 
 type Config struct {
-	LogLevel     string
 	KafkaConfig  kafka.ServerConfig
 	PulsarConfig PulsarConfig
 }

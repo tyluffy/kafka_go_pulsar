@@ -12,6 +12,10 @@ type KafkaImpl struct {
 	pulsarClient pulsar.Client
 }
 
+func (k *KafkaImpl) Produce(addr *net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
+	panic("implement me")
+}
+
 func (k *KafkaImpl) ConnPulsar() (err error) {
 	k.pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
 	return
