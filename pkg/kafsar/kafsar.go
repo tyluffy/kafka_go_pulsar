@@ -16,16 +16,20 @@ type PulsarConfig struct {
 	TcpPort  int
 }
 
-func Run(config *Config, impl Server) error {
+type Broker struct {
+}
+
+func Run(config *Config, impl Server) (*Broker, error) {
 	logrus.Info("kafsar started")
 	k := &KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig}
 	err := k.ConnPulsar()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = kafka.Run(&config.KafkaConfig, k)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	broker := &Broker{}
+	return broker, nil
 }

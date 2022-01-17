@@ -3,9 +3,12 @@ package main
 import (
 	"flag"
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
+	"os"
+	"os/signal"
 )
 
-var listenAddr = flag.String("kafka_listen_addr", "0.0.0.0", "kafka listen addr")
+var listenHost = flag.String("kafka_listen_host", "0.0.0.0", "kafka listen host")
+var listenPort = flag.Int("kafka_listen_port", 9092, "kafka listen port")
 var multiCore = flag.Bool("kafka_multi_core", false, "multi core")
 var needSasl = flag.Bool("kafka_need_sasl", false, "need sasl")
 var maxConn = flag.Int("kafka_max_conn", 500, "need sasl")
@@ -21,7 +24,8 @@ var pulsarTcpPort = flag.Int("pulsar_tcp_port", 6650, "pulsar tcp port")
 func main() {
 	flag.Parse()
 	config := &kafsar.Config{}
-	config.KafkaConfig.ListenAddr = *listenAddr
+	config.KafkaConfig.ListenHost = *listenHost
+	config.KafkaConfig.ListenPort = *listenPort
 	config.KafkaConfig.MultiCore = *multiCore
 	config.KafkaConfig.NeedSasl = *needSasl
 	config.KafkaConfig.ClusterId = *clusterId
@@ -32,8 +36,13 @@ func main() {
 	config.PulsarConfig.HttpPort = *pulsarHttpPort
 	config.PulsarConfig.TcpPort = *pulsarTcpPort
 	e := &ExampleKafsarImpl{}
-	err := kafsar.Run(config, e)
+	_, err := kafsar.Run(config, e)
 	if err != nil {
 		panic(err)
+	}
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	for {
+		<-interrupt
 	}
 }

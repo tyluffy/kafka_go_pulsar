@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	pulsarContainerName = "mqtt-test-pulsar"
+	pulsarContainerName = "kafka-test-pulsar"
 )
 
 //nolint
@@ -81,7 +81,7 @@ func startPulsarInternal() error {
 				},
 			},
 		},
-	}, nil, nil, "mqtt-test-pulsar")
+	}, nil, nil, "kafka-test-pulsar")
 	if err != nil {
 		panic(err)
 	}
