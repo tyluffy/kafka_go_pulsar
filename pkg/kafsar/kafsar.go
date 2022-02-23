@@ -25,6 +25,7 @@ import (
 type Config struct {
 	KafkaConfig  kafka.ServerConfig
 	PulsarConfig PulsarConfig
+	KafsarConfig KafsarConfig
 }
 
 type PulsarConfig struct {
@@ -33,13 +34,23 @@ type PulsarConfig struct {
 	TcpPort  int
 }
 
+type KafsarConfig struct {
+	MaxConsumersPerGroup     int
+	GroupMinSessionTimeoutMs int
+	GroupMaxSessionTimeoutMs int
+}
+
 type Broker struct {
 }
 
 func Run(config *Config, impl Server) (*Broker, error) {
 	logrus.Info("kafsar started")
-	k := &KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig}
+	k := &KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
 	err := k.ConnPulsar()
+	if err != nil {
+		return nil, err
+	}
+	err = k.InitGroupCoordinator()
 	if err != nil {
 		return nil, err
 	}

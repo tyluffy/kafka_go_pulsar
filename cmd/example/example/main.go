@@ -52,6 +52,9 @@ func main() {
 	config.PulsarConfig.Host = *pulsarHost
 	config.PulsarConfig.HttpPort = *pulsarHttpPort
 	config.PulsarConfig.TcpPort = *pulsarTcpPort
+	config.KafsarConfig.MaxConsumersPerGroup = 1
+	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000
+	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
 	e := &ExampleKafsarImpl{}
 	_, err := kafsar.Run(config, e)
 	if err != nil {

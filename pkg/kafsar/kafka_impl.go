@@ -20,13 +20,22 @@ package kafsar
 import (
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go/pkg/service"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
 type KafkaImpl struct {
-	server       Server
-	pulsarConfig PulsarConfig
-	pulsarClient pulsar.Client
+	server           Server
+	pulsarConfig     PulsarConfig
+	pulsarClient     pulsar.Client
+	groupCoordinator *GroupCoordinatorImpl
+	kafsarConfig     KafsarConfig
+}
+
+func (k *KafkaImpl) InitGroupCoordinator() (err error) {
+	k.groupCoordinator = &GroupCoordinatorImpl{pulsarConfig: k.pulsarConfig, KafsarConfig: k.kafsarConfig, pulsarClient: k.pulsarClient}
+	k.groupCoordinator.GroupManager = make(map[string]Group)
+	return
 }
 
 func (k *KafkaImpl) Produce(addr *net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
@@ -43,15 +52,42 @@ func (k *KafkaImpl) FetchPartition(addr *net.Addr, topic string, req *service.Fe
 }
 
 func (k *KafkaImpl) GroupJoin(addr *net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
-	panic("implement me")
+	logrus.Infof("%#v joining to group: %s, memberId: %s", addr, req.GroupId, req.MemberId)
+	joinGroupResp, err := k.groupCoordinator.HandleJoinGroup(req.GroupId, req.MemberId, req.ClientId, req.ProtocolType,
+		req.SessionTimeout, req.GroupProtocols)
+	if err != nil {
+		logrus.Errorf("unexpected exception in join group: %s, error: %s", req.GroupId, err)
+		return &service.JoinGroupResp{
+			ErrorCode:    service.UNKNOWN_SERVER_ERROR,
+			MemberId:     req.MemberId,
+			GenerationId: -1,
+		}, nil
+	}
+	return joinGroupResp, nil
 }
 
 func (k *KafkaImpl) GroupLeave(addr *net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
-	panic("implement me")
+	logrus.Infof("%+v leaving group: %s, members: %+v", addr, req.GroupId, req.Members)
+	leaveGroupResp, err := k.groupCoordinator.HandleLeaveGroup(req.GroupId, req.Members)
+	if err != nil {
+		logrus.Errorf("unexpected exception in leaving group: %s, error: %s", req.GroupId, err)
+		return &service.LeaveGroupResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
+	return leaveGroupResp, nil
 }
 
 func (k *KafkaImpl) GroupSync(addr *net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
-	panic("implement me")
+	logrus.Infof("%+v syncing group: %s, memberId: %s", addr, req.GroupId, req.MemberId)
+	syncGroupResp, err := k.groupCoordinator.HandleSyncGroup(req.GroupId, req.MemberId, req.GenerationId, req.GroupAssignments)
+	if err != nil {
+		logrus.Errorf("unexpected exception in sync group: %s, error: %s", req.GroupId, err)
+		return &service.SyncGroupResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
+	return syncGroupResp, nil
 }
 
 func (k *KafkaImpl) OffsetListPartition(addr *net.Addr, topic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
