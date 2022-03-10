@@ -20,14 +20,14 @@ package test
 type KafsarImpl struct {
 }
 
-func (k KafsarImpl) Auth(username string, password string) (bool, error) {
+func (k KafsarImpl) Auth(username string, password string, clientId string) (bool, error) {
 	return true, nil
 }
 
-func (k KafsarImpl) AuthTopic(username string, password, topic string) (bool, error) {
+func (k KafsarImpl) AuthTopic(username string, password, clientId, topic string) (bool, error) {
 	return true, nil
 }
 
-func (k KafsarImpl) AuthTopicGroup(username string, password, consumerGroup string) (bool, error) {
+func (k KafsarImpl) AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error) {
 	return true, nil
 }

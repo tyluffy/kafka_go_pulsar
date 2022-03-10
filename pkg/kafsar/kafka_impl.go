@@ -38,7 +38,7 @@ func (k *KafkaImpl) InitGroupCoordinator() (err error) {
 	return
 }
 
-func (k *KafkaImpl) Produce(addr *net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
+func (k *KafkaImpl) Produce(addr net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
 	panic("implement me")
 }
 
@@ -47,11 +47,11 @@ func (k *KafkaImpl) ConnPulsar() (err error) {
 	return
 }
 
-func (k *KafkaImpl) FetchPartition(addr *net.Addr, topic string, req *service.FetchPartitionReq) (*service.FetchPartitionResp, error) {
+func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.FetchPartitionReq) (*service.FetchPartitionResp, error) {
 	panic("implement me")
 }
 
-func (k *KafkaImpl) GroupJoin(addr *net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
+func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
 	logrus.Infof("%#v joining to group: %s, memberId: %s", addr, req.GroupId, req.MemberId)
 	joinGroupResp, err := k.groupCoordinator.HandleJoinGroup(req.GroupId, req.MemberId, req.ClientId, req.ProtocolType,
 		req.SessionTimeout, req.GroupProtocols)
@@ -66,7 +66,7 @@ func (k *KafkaImpl) GroupJoin(addr *net.Addr, req *service.JoinGroupReq) (*servi
 	return joinGroupResp, nil
 }
 
-func (k *KafkaImpl) GroupLeave(addr *net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
+func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
 	logrus.Infof("%+v leaving group: %s, members: %+v", addr, req.GroupId, req.Members)
 	leaveGroupResp, err := k.groupCoordinator.HandleLeaveGroup(req.GroupId, req.Members)
 	if err != nil {
@@ -78,7 +78,7 @@ func (k *KafkaImpl) GroupLeave(addr *net.Addr, req *service.LeaveGroupReq) (*ser
 	return leaveGroupResp, nil
 }
 
-func (k *KafkaImpl) GroupSync(addr *net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
+func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
 	logrus.Infof("%+v syncing group: %s, memberId: %s", addr, req.GroupId, req.MemberId)
 	syncGroupResp, err := k.groupCoordinator.HandleSyncGroup(req.GroupId, req.MemberId, req.GenerationId, req.GroupAssignments)
 	if err != nil {
@@ -90,20 +90,20 @@ func (k *KafkaImpl) GroupSync(addr *net.Addr, req *service.SyncGroupReq) (*servi
 	return syncGroupResp, nil
 }
 
-func (k *KafkaImpl) OffsetListPartition(addr *net.Addr, topic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
+func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
 	panic("implement me")
 }
 
-func (k *KafkaImpl) OffsetCommitPartition(addr *net.Addr, topic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
+func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, topic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
 	panic("implement me")
 }
 
-func (k *KafkaImpl) OffsetFetch(addr *net.Addr, topic string, partition int) (*service.OffsetFetchPartitionResp, error) {
+func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.OffsetFetchPartitionReq) (*service.OffsetFetchPartitionResp, error) {
 	panic("implement me")
 }
 
 func (k *KafkaImpl) SaslAuth(req service.SaslReq) (bool, service.ErrorCode) {
-	auth, err := k.server.Auth(req.Username, req.Password)
+	auth, err := k.server.Auth(req.Username, req.Password, req.ClientId)
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
 	}
@@ -111,7 +111,7 @@ func (k *KafkaImpl) SaslAuth(req service.SaslReq) (bool, service.ErrorCode) {
 }
 
 func (k *KafkaImpl) SaslAuthTopic(req service.SaslReq, topic string) (bool, service.ErrorCode) {
-	auth, err := k.server.AuthTopic(req.Username, req.Password, topic)
+	auth, err := k.server.AuthTopic(req.Username, req.Password, req.ClientId, topic)
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
 	}
@@ -119,13 +119,13 @@ func (k *KafkaImpl) SaslAuthTopic(req service.SaslReq, topic string) (bool, serv
 }
 
 func (k *KafkaImpl) SaslAuthConsumerGroup(req service.SaslReq, consumerGroup string) (bool, service.ErrorCode) {
-	auth, err := k.server.AuthTopicGroup(req.Username, req.Password, consumerGroup)
+	auth, err := k.server.AuthTopicGroup(req.Username, req.Password, req.ClientId, consumerGroup)
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
 	}
 	return true, service.NONE
 }
 
-func (k *KafkaImpl) Disconnect(addr *net.Addr) {
+func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	panic("implement me")
 }
