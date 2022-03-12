@@ -24,7 +24,7 @@ func (k KafsarImpl) Auth(username string, password string, clientId string) (boo
 	return true, nil
 }
 
-func (k KafsarImpl) AuthTopic(username string, password, clientId, topic string) (bool, error) {
+func (k KafsarImpl) AuthTopic(username string, password, clientId, topic, permissionType string) (bool, error) {
 	return true, nil
 }
 

@@ -20,7 +20,7 @@ package kafsar
 type Server interface {
 	Auth(username string, password string, clientId string) (bool, error)
 
-	AuthTopic(username string, password, clientId, topic string) (bool, error)
+	AuthTopic(username string, password, clientId, topic, permissionType string) (bool, error)
 
 	AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error)
 }
