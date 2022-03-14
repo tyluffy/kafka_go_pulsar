@@ -17,6 +17,8 @@
 
 package test
 
+var subscriptionPrefix = "kafsar_sub_"
+
 type KafsarImpl struct {
 }
 
@@ -30,4 +32,8 @@ func (k KafsarImpl) AuthTopic(username string, password, clientId, topic, permis
 
 func (k KafsarImpl) AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error) {
 	return true, nil
+}
+
+func (k KafsarImpl) SubscriptionName(groupId string) (string, error) {
+	return subscriptionPrefix + groupId, nil
 }

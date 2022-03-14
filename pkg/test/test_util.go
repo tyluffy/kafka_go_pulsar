@@ -17,7 +17,25 @@
 
 package test
 
-import "net"
+import (
+	"bytes"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"time"
+)
+
+var httpClient *http.Client
+
+func init() {
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:       1,
+			IdleConnTimeout:    5 * time.Second,
+			DisableCompression: false,
+		},
+	}
+}
 
 func AcquireUnusedPort() (int, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:0")
@@ -30,4 +48,18 @@ func AcquireUnusedPort() (int, error) {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+func HttpGetRequest(url string) ([]byte, error) {
+	var body bytes.Buffer
+	request, err := http.NewRequest(http.MethodGet, url, &body)
+	if err != nil {
+		return nil, err
+	}
+	defer request.Body.Close()
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(response.Body)
 }
