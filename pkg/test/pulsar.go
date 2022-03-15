@@ -79,8 +79,12 @@ func startPulsarInternal() error {
 	}
 	logrus.Info("port binding is ", bindings)
 	resp, err := cli.ContainerCreate(context.TODO(), &container.Config{
-		Image:        "ttbb/pulsar:mate",
-		Env:          []string{"REMOTE_MODE=false"},
+		Image: "ttbb/pulsar:mate",
+		Env: []string{
+			"REMOTE_MODE=false",
+			"PULSAR_BROKER_ENTRY_METADATA_INTERCEPTORS=org.apache.pulsar.common.intercept.AppendIndexMetadataInterceptor",
+			"PULSAR_EXPOSING_BROKER_ENTRY_METADATA_TO_CLIENT_ENABLED=true",
+		},
 		ExposedPorts: portSpecs,
 		Tty:          false,
 	}, &container.HostConfig{
