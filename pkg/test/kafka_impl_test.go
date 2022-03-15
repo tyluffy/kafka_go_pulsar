@@ -29,6 +29,8 @@ import (
 )
 
 var (
+	username         = "username"
+	password         = "password"
 	clientId         = "consumer-a1e12365-ddfa-43fc-826e-9661fb54c274-1"
 	sessionTimeoutMs = 30000
 	protocolType     = "consumer"
@@ -52,7 +54,6 @@ var (
 			GroupMaxSessionTimeoutMs: 30000,
 			MaxFetchWaitMs:           maxFetchWaitMs,
 			MaxFetchRecord:           maxFetchRecord,
-			NamespacePrefix:          "public/default",
 		},
 	}
 	kafsarServer = KafsarImpl{}
@@ -74,12 +75,23 @@ func (a *Addr) String() string {
 func TestFetchPartitionNoMessage(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
+	pulsarTopic := topicPrefix + topic
 	setupPulsar()
 	k := kafsar.NewKafsar(kafsarServer, config)
 	err := k.InitGroupCoordinator()
 	assert.Nil(t, err)
 	err = k.ConnPulsar()
 	assert.Nil(t, err)
+
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
 
 	// join group
 	joinGroupReq := service.JoinGroupReq{
@@ -109,7 +121,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	_, err = k.FetchPartition(&addr, topic, &fetchPartitionReq)
 	assert.Nil(t, err)
 
-	url := "http://localhost:8080/admin/v2/persistent/public/default/" + topic + "/subscriptions"
+	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + "/subscriptions"
 	request, err := HttpGetRequest(url)
 	assert.Nil(t, err)
 	assert.Contains(t, string(request), subscriptionPrefix)
@@ -118,17 +130,28 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 func TestFetchAndCommitOffset(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
+	pulsarTopic := topicPrefix + topic
 	setupPulsar()
 	k := kafsar.NewKafsar(kafsarServer, config)
 	err := k.InitGroupCoordinator()
 	assert.Nil(t, err)
 	err = k.ConnPulsar()
 	assert.Nil(t, err)
-	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: topic})
+	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
 	assert.Nil(t, err)
 	messageId, err := producer.Send(context.TODO(), &pulsar.ProducerMessage{Value: testContent})
 	logrus.Infof("send msg to pulsar %s", messageId)
 	assert.Nil(t, err)
+
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
 
 	// join group
 	joinGroupReq := service.JoinGroupReq{

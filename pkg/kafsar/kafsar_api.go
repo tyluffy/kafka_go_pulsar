@@ -25,4 +25,8 @@ type Server interface {
 	AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error)
 
 	SubscriptionName(groupId string) (string, error)
+
+	KafkaConsumeTopic(username, topic string) (string, error)
+
+	KafkaProduceTopic(username, topic string) (string, error)
 }

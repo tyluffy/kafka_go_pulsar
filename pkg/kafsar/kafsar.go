@@ -38,7 +38,6 @@ type KafsarConfig struct {
 	MaxConsumersPerGroup     int
 	GroupMinSessionTimeoutMs int
 	GroupMaxSessionTimeoutMs int
-	NamespacePrefix          string
 	ConsumerReceiveQueueSize int
 	MaxFetchRecord           int
 	MaxFetchWaitMs           int

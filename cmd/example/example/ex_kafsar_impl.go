@@ -35,3 +35,11 @@ func (e ExampleKafsarImpl) AuthTopicGroup(username string, password, clientId, c
 func (e ExampleKafsarImpl) SubscriptionName(groupId string) (string, error) {
 	return groupId, nil
 }
+
+func (e ExampleKafsarImpl) KafkaConsumeTopic(username, topic string) (string, error) {
+	return topic, nil
+}
+
+func (e ExampleKafsarImpl) KafkaProduceTopic(username, topic string) (string, error) {
+	return topic, nil
+}

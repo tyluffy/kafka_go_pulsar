@@ -38,11 +38,18 @@ type KafkaImpl struct {
 	kafsarConfig     KafsarConfig
 	consumerManager  map[string]*ConsumerMetadata
 	mutex            sync.RWMutex
+	usernameManager  map[string]*userInfo
+}
+
+type userInfo struct {
+	username string
+	clientId string
 }
 
 func NewKafsar(impl Server, config *Config) *KafkaImpl {
 	kafka := KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
 	kafka.consumerManager = make(map[string]*ConsumerMetadata)
+	kafka.usernameManager = make(map[string]*userInfo)
 	return &kafka
 }
 
@@ -64,7 +71,22 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 	logrus.Infof("%s fetch topic: %s", addr.String(), topic)
 	//TODO topic authorization
 
-	fullNameTopic := k.kafsarConfig.NamespacePrefix + "/" + topic
+	user, exist := k.usernameManager[addr.String()]
+	if !exist {
+		logrus.Errorf("fetch partition failed when get username by addr %s, kafka topic: %s", addr.String(), topic)
+		return &service.FetchPartitionResp{
+			PartitionId: req.PartitionId,
+			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
+	fullNameTopic, err := k.server.KafkaConsumeTopic(user.username, topic)
+	if err != nil {
+		logrus.Errorf("fetch partition failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
+		return &service.FetchPartitionResp{
+			PartitionId: req.PartitionId,
+			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
 	k.mutex.RLock()
 	consumerMetadata, exist := k.consumerManager[fullNameTopic]
 	k.mutex.RUnlock()
@@ -168,7 +190,22 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *servic
 
 func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, topic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
 	logrus.Infof("%s topic: %s, partition: %d, commit offset: %d", addr.String(), topic, req.PartitionId, req.OffsetCommitOffset)
-	fullNameTopic := k.kafsarConfig.NamespacePrefix + "/" + topic
+	user, exist := k.usernameManager[addr.String()]
+	if !exist {
+		logrus.Errorf("offset commit failed when get username by addr %s, kafka topic: %s", addr.String(), topic)
+		return &service.OffsetCommitPartitionResp{
+			PartitionId: req.PartitionId,
+			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
+	fullNameTopic, err := k.server.KafkaConsumeTopic(user.username, topic)
+	if err != nil {
+		logrus.Errorf("offset commit failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
+		return &service.OffsetCommitPartitionResp{
+			PartitionId: req.PartitionId,
+			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
 	k.mutex.RLock()
 	consumerMessages, exist := k.consumerManager[fullNameTopic]
 	k.mutex.RUnlock()
@@ -196,7 +233,20 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, topic string, req *serv
 
 func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.OffsetFetchPartitionReq) (*service.OffsetFetchPartitionResp, error) {
 	logrus.Infof("%s fetch topic: %s offset, partition: %d", addr.String(), topic, req.PartitionId)
-	fullNameTopic := k.kafsarConfig.NamespacePrefix + "/" + topic
+	user, exist := k.usernameManager[addr.String()]
+	if !exist {
+		logrus.Errorf("offset fetch failed when get username by addr %s, kafka topic: %s", addr.String(), topic)
+		return &service.OffsetFetchPartitionResp{
+			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+		}, nil
+	}
+	fullNameTopic, err := k.server.KafkaConsumeTopic(user.username, topic)
+	if err != nil {
+		logrus.Errorf("offset fetch failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
+		return &service.OffsetFetchPartitionResp{
+			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+		}, nil
+	}
 	subscriptionName, err := k.server.SubscriptionName(req.GroupId)
 	if err != nil {
 		logrus.Errorf("sync group %s failed when offset fetch, error: %s", req.GroupId, err)
@@ -207,7 +257,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if !exist {
 		k.mutex.Lock()
 		metadata := ConsumerMetadata{groupId: req.GroupId, messageIds: list.New()}
-		channel, consumer, err := k.createConsumer(topic, subscriptionName)
+		channel, consumer, err := k.createConsumer(fullNameTopic, subscriptionName)
 		if err != nil {
 			logrus.Errorf("%s, create channel failed, error: %s", topic, err)
 			return &service.OffsetFetchPartitionResp{
@@ -234,15 +284,22 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	}, nil
 }
 
-func (k *KafkaImpl) SaslAuth(req service.SaslReq) (bool, service.ErrorCode) {
+func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, service.ErrorCode) {
 	auth, err := k.server.Auth(req.Username, req.Password, req.ClientId)
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
 	}
+	_, exist := k.usernameManager[addr.String()]
+	if !exist {
+		k.usernameManager[addr.String()] = &userInfo{
+			username: req.Username,
+			clientId: req.ClientId,
+		}
+	}
 	return true, service.NONE
 }
 
-func (k *KafkaImpl) SaslAuthTopic(req service.SaslReq, topic, permissionType string) (bool, service.ErrorCode) {
+func (k *KafkaImpl) SaslAuthTopic(addr net.Addr, req service.SaslReq, topic, permissionType string) (bool, service.ErrorCode) {
 	auth, err := k.server.AuthTopic(req.Username, req.Password, req.ClientId, topic, permissionType)
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
@@ -250,7 +307,7 @@ func (k *KafkaImpl) SaslAuthTopic(req service.SaslReq, topic, permissionType str
 	return true, service.NONE
 }
 
-func (k *KafkaImpl) SaslAuthConsumerGroup(req service.SaslReq, consumerGroup string) (bool, service.ErrorCode) {
+func (k *KafkaImpl) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, consumerGroup string) (bool, service.ErrorCode) {
 	auth, err := k.server.AuthTopicGroup(req.Username, req.Password, req.ClientId, consumerGroup)
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
@@ -259,7 +316,8 @@ func (k *KafkaImpl) SaslAuthConsumerGroup(req service.SaslReq, consumerGroup str
 }
 
 func (k *KafkaImpl) Disconnect(addr net.Addr) {
-	panic("implement me")
+	logrus.Infof("lost connection: %s", addr)
+	delete(k.usernameManager, addr.String())
 }
 
 func (k *KafkaImpl) createConsumer(topic, subscriptionName string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {
