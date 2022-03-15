@@ -29,6 +29,15 @@ import (
 )
 
 var (
+	clientId         = "consumer-a1e12365-ddfa-43fc-826e-9661fb54c274-1"
+	sessionTimeoutMs = 30000
+	protocolType     = "consumer"
+	protocol         = service.GroupProtocol{
+		ProtocolName:     "range",
+		ProtocolMetadata: "000100000001000474657374ffffffff00000000",
+	}
+	groupProtocol   []*service.GroupProtocol
+	protocols       = append(groupProtocol, &protocol)
 	partition       = 0
 	testClientId    = "consumer-test-client-id"
 	testContent     = "test-content"
