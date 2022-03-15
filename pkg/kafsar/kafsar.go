@@ -41,6 +41,7 @@ type KafsarConfig struct {
 	ConsumerReceiveQueueSize int
 	MaxFetchRecord           int
 	MaxFetchWaitMs           int
+	ContinuousOffset         bool
 }
 
 type Broker struct {

@@ -20,12 +20,10 @@ package kafsar
 import (
 	"container/list"
 	"encoding/json"
-	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go/pkg/service"
 	"github.com/sirupsen/logrus"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -44,6 +42,11 @@ type KafkaImpl struct {
 type userInfo struct {
 	username string
 	clientId string
+}
+
+type messageIdPair struct {
+	messageId pulsar.MessageID
+	offset    int64
 }
 
 func NewKafsar(impl Server, config *Config) *KafkaImpl {
@@ -100,6 +103,8 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 	var records []*service.Record
 	recordBatch := service.RecordBatch{Records: records}
 	fetchStart := time.Now()
+	var baseOffset int64
+	fistMessage := true
 	for {
 		timeTicker := make(chan bool, 1)
 		go func() {
@@ -111,13 +116,21 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 			message := channel.Message
 			logrus.Infof("receive msg: %s from %s", message.ID(), message.Topic())
 			_, _ = json.Marshal(message.Properties())
-			offset := ConvOffset(message.ID())
+			offset := convOffset(message, k.kafsarConfig.ContinuousOffset)
+			if fistMessage {
+				fistMessage = false
+				baseOffset = offset
+			}
+			relativeOffset := baseOffset - offset
 			record := service.Record{
 				Value:          message.Payload(),
-				RelativeOffset: offset,
+				RelativeOffset: int(relativeOffset),
 			}
 			recordBatch.Records = append(recordBatch.Records, &record)
-			consumerMetadata.messageIds.PushBack(message.ID())
+			consumerMetadata.messageIds.PushBack(messageIdPair{
+				messageId: message.ID(),
+				offset:    offset,
+			})
 		case <-timeTicker:
 			logrus.Debugf("fetch empty message for topic %s", fullNameTopic)
 		}
@@ -125,7 +138,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 			break
 		}
 	}
-	recordBatch.Offset = 0
+	recordBatch.Offset = baseOffset
 	return &service.FetchPartitionResp{
 		ErrorCode:        service.NONE,
 		PartitionId:      req.PartitionId,
@@ -216,13 +229,12 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, topic string, req *serv
 	ids := consumerMessages.messageIds
 	front := ids.Front()
 	for element := front; element != nil; element = element.Next() {
-		messageId := element.Value.(pulsar.MessageID)
-		offset := ConvOffset(messageId)
-		if int64(offset) > req.OffsetCommitOffset {
+		messageIdPair := element.Value.(messageIdPair)
+		if messageIdPair.offset > req.OffsetCommitOffset {
 			break
 		}
-		logrus.Infof("ack pulsar %s for %s", fullNameTopic, messageId)
-		consumerMessages.consumer.AckID(messageId)
+		logrus.Infof("ack pulsar %s for %s", fullNameTopic, messageIdPair.messageId)
+		consumerMessages.consumer.AckID(messageIdPair.messageId)
 		consumerMessages.messageIds.Remove(element)
 	}
 	return &service.OffsetCommitPartitionResp{
@@ -335,9 +347,4 @@ func (k *KafkaImpl) createConsumer(topic, subscriptionName string) (chan pulsar.
 		return nil, nil, err
 	}
 	return channel, consumer, nil
-}
-
-func ConvOffset(id pulsar.MessageID) int {
-	offset, _ := strconv.Atoi(fmt.Sprint(id.LedgerID()) + fmt.Sprint(id.EntryID()) + fmt.Sprint(id.PartitionIdx()))
-	return offset
 }

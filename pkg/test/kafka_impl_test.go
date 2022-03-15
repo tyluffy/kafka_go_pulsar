@@ -54,6 +54,7 @@ var (
 			GroupMaxSessionTimeoutMs: 30000,
 			MaxFetchWaitMs:           maxFetchWaitMs,
 			MaxFetchRecord:           maxFetchRecord,
+			ContinuousOffset:         false,
 		},
 	}
 	kafsarServer = KafsarImpl{}
@@ -139,7 +140,8 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	assert.Nil(t, err)
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
 	assert.Nil(t, err)
-	messageId, err := producer.Send(context.TODO(), &pulsar.ProducerMessage{Value: testContent})
+	message := pulsar.ProducerMessage{Value: testContent}
+	messageId, err := producer.Send(context.TODO(), &message)
 	logrus.Infof("send msg to pulsar %s", messageId)
 	assert.Nil(t, err)
 
@@ -186,8 +188,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := fetchPartitionResp.RecordBatch.Records[0].RelativeOffset
-	assert.Equal(t, kafsar.ConvOffset(messageId), offset)
-
+	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 	// offset commit
 	offsetCommitPartitionReq := service.OffsetCommitPartitionReq{
 		ClientId:           clientId,
