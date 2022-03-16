@@ -20,6 +20,7 @@ package kafsar
 import (
 	"container/list"
 	"encoding/json"
+	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go/pkg/service"
 	"github.com/sirupsen/logrus"
@@ -66,7 +67,8 @@ func (k *KafkaImpl) Produce(addr net.Addr, topic string, partition int, req *ser
 }
 
 func (k *KafkaImpl) ConnPulsar() (err error) {
-	k.pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
+	pulsarUrl := fmt.Sprintf("pulsar://%s:%d", k.pulsarConfig.Host, k.pulsarConfig.TcpPort)
+	k.pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{URL: pulsarUrl})
 	return
 }
 

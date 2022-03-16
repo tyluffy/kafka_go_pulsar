@@ -56,6 +56,11 @@ var (
 			MaxFetchRecord:           maxFetchRecord,
 			ContinuousOffset:         false,
 		},
+		PulsarConfig: kafsar.PulsarConfig{
+			Host:     "localhost",
+			HttpPort: 8080,
+			TcpPort:  6650,
+		},
 	}
 	kafsarServer = KafsarImpl{}
 )
