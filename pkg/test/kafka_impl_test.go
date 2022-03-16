@@ -19,6 +19,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/google/uuid"
 	"github.com/paashzj/kafka_go/pkg/service"
@@ -127,7 +128,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	_, err = k.FetchPartition(&addr, topic, &fetchPartitionReq)
 	assert.Nil(t, err)
 
-	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + "/subscriptions"
+	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + fmt.Sprintf(kafsar.PartitionSuffixFormat, partition) + "/subscriptions"
 	request, err := HttpGetRequest(url)
 	assert.Nil(t, err)
 	assert.Contains(t, string(request), subscriptionPrefix)

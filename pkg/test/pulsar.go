@@ -82,6 +82,7 @@ func startPulsarInternal() error {
 		Image: "ttbb/pulsar:mate",
 		Env: []string{
 			"REMOTE_MODE=false",
+			"PULSAR_ALLOW_AUTO_TOPIC_CREATION_TYPE=partitioned",
 			"PULSAR_BROKER_ENTRY_METADATA_INTERCEPTORS=org.apache.pulsar.common.intercept.AppendIndexMetadataInterceptor",
 			"PULSAR_EXPOSING_BROKER_ENTRY_METADATA_TO_CLIENT_ENABLED=true",
 		},

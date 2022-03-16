@@ -269,7 +269,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if !exist {
 		k.mutex.Lock()
 		metadata := ConsumerMetadata{groupId: req.GroupId, messageIds: list.New()}
-		channel, consumer, err := k.createConsumer(fullNameTopic, subscriptionName)
+		channel, consumer, err := k.createConsumer(fullNameTopic, req.PartitionId, subscriptionName)
 		if err != nil {
 			logrus.Errorf("%s, create channel failed, error: %s", topic, err)
 			return &service.OffsetFetchPartitionResp{
@@ -332,10 +332,10 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	delete(k.userInfoManager, addr.String())
 }
 
-func (k *KafkaImpl) createConsumer(topic, subscriptionName string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {
+func (k *KafkaImpl) createConsumer(topic string, partition int, subscriptionName string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {
 	channel := make(chan pulsar.ConsumerMessage, k.kafsarConfig.ConsumerReceiveQueueSize)
 	options := pulsar.ConsumerOptions{
-		Topic:                       topic,
+		Topic:                       topic + fmt.Sprintf(PartitionSuffixFormat, partition),
 		SubscriptionName:            subscriptionName,
 		Type:                        pulsar.Failover,
 		SubscriptionInitialPosition: pulsar.SubscriptionPositionEarliest,
