@@ -42,6 +42,12 @@ type KafsarConfig struct {
 	MaxFetchRecord           int
 	MaxFetchWaitMs           int
 	ContinuousOffset         bool
+	// PulsarTenant use for kafsar internal
+	PulsarTenant string
+	// PulsarNamespace use for kafsar internal
+	PulsarNamespace string
+	// OffsetTopic use to store kafka offset
+	OffsetTopic string
 }
 
 type Broker struct {

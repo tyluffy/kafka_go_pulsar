@@ -58,6 +58,9 @@ var (
 			MaxFetchWaitMs:           maxFetchWaitMs,
 			MaxFetchRecord:           maxFetchRecord,
 			ContinuousOffset:         false,
+			PulsarTenant:             "public",
+			PulsarNamespace:          "default",
+			OffsetTopic:              "kafka_offset",
 		},
 		PulsarConfig: kafsar.PulsarConfig{
 			Host:     "localhost",

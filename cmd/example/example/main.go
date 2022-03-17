@@ -58,6 +58,9 @@ func main() {
 	config.KafsarConfig.MaxFetchRecord = 100
 	config.KafsarConfig.MaxFetchWaitMs = 200
 	config.KafsarConfig.ContinuousOffset = false
+	config.KafsarConfig.PulsarTenant = "public"
+	config.KafsarConfig.PulsarNamespace = "default"
+	config.KafsarConfig.OffsetTopic = "kafka_offset"
 	e := &ExampleKafsarImpl{}
 	_, err := kafsar.Run(config, e)
 	if err != nil {
