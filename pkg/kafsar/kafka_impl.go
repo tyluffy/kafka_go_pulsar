@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go/pkg/service"
+	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
+	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -194,10 +196,37 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 }
 
 func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
+	userInfo, exist := k.userInfoManager[addr.String()]
+	if !exist {
+		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), topic)
+		return &service.ListOffsetsPartitionResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
 	logrus.Infof("%s offset list topic: %s, partition: %d", addr.String(), topic, req.PartitionId)
+	fullTopicName, err := k.server.KafkaConsumeTopic(userInfo.username, topic)
+	if err != nil {
+		logrus.Errorf("get topic failed. err: %s", err)
+		return &service.ListOffsetsPartitionResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
+	var message pulsar.Message
+	if req.Time == constant.TimeEarliest {
+		message = utils.ReadEarliestMsg(fullTopicName, k.kafsarConfig.MaxFetchWaitMs, req.PartitionId, k.pulsarClient)
+	}
+	if message == nil {
+		return &service.ListOffsetsPartitionResp{
+			PartitionId: req.PartitionId,
+			Offset:      constant.DefaultOffset,
+			Time:        constant.TimeEarliest,
+		}, nil
+	}
+	offset := convOffset(message, k.kafsarConfig.ContinuousOffset)
 	return &service.ListOffsetsPartitionResp{
 		PartitionId: req.PartitionId,
-		Offset:      0,
+		Offset:      offset,
+		Time:        constant.TimeEarliest,
 	}, nil
 }
 
@@ -289,7 +318,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	group.consumerMetadata = consumerMetadata
 	return &service.OffsetFetchPartitionResp{
 		PartitionId: req.PartitionId,
-		Offset:      0,
+		Offset:      constant.UnknownOffset,
 		LeaderEpoch: -1,
 		Metadata:    nil,
 		ErrorCode:   int16(service.NONE),
@@ -335,7 +364,7 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 func (k *KafkaImpl) createConsumer(topic string, partition int, subscriptionName string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {
 	channel := make(chan pulsar.ConsumerMessage, k.kafsarConfig.ConsumerReceiveQueueSize)
 	options := pulsar.ConsumerOptions{
-		Topic:                       topic + fmt.Sprintf(PartitionSuffixFormat, partition),
+		Topic:                       topic + fmt.Sprintf(constant.PartitionSuffixFormat, partition),
 		SubscriptionName:            subscriptionName,
 		Type:                        pulsar.Failover,
 		SubscriptionInitialPosition: pulsar.SubscriptionPositionEarliest,

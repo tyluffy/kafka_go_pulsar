@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v20.10.13+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/google/uuid v1.3.0
-	github.com/paashzj/kafka_go v0.0.6-0.20220315100050-5aa6d5d26002
+	github.com/paashzj/kafka_go v0.0.6-0.20220316090855-0cbcac128ec9
 	github.com/segmentio/kafka-go v0.4.26
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
