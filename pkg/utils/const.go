@@ -15,8 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package utils
 
 const (
+	DefaultOffset = int64(0)
+	Earliest      = int64(-2)
+	Lasted        = int64(-1)
+
+	UnknownOffset = int64(-1)
+
+	OffsetReaderEarliestName = "OFFSET_LIST_EARLIEST"
+
 	PartitionSuffixFormat = "-partition-%d"
 )

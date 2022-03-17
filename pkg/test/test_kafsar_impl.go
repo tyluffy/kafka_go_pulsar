@@ -20,6 +20,7 @@ package test
 var (
 	subscriptionPrefix = "kafsar_sub_"
 	topicPrefix        = "kafsar_topic_"
+	defaultTopicType   = "persistent://public/default/"
 )
 
 type KafsarImpl struct {
@@ -42,7 +43,7 @@ func (k KafsarImpl) SubscriptionName(groupId string) (string, error) {
 }
 
 func (k KafsarImpl) KafkaConsumeTopic(username, topic string) (string, error) {
-	return topicPrefix + topic, nil
+	return defaultTopicType + topicPrefix + topic, nil
 }
 
 func (k KafsarImpl) KafkaProduceTopic(username, topic string) (string, error) {

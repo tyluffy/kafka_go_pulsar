@@ -19,9 +19,12 @@ package test
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/apache/pulsar-client-go/pulsar"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -62,4 +65,9 @@ func HttpGetRequest(url string) ([]byte, error) {
 		return nil, err
 	}
 	return ioutil.ReadAll(response.Body)
+}
+
+func ConvertOffset(messageId pulsar.MessageID) int64 {
+	offset, _ := strconv.Atoi(fmt.Sprint(messageId.LedgerID()) + fmt.Sprint(messageId.EntryID()) + fmt.Sprint(messageId.PartitionIdx()))
+	return int64(offset)
 }
