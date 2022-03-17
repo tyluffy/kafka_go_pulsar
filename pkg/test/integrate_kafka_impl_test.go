@@ -27,6 +27,7 @@ import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"net"
 	"testing"
 )
 
@@ -45,7 +46,7 @@ var (
 	partition       = 0
 	testClientId    = "consumer-test-client-id"
 	testContent     = "test-content"
-	addr            = Addr{ip: "localhost", port: "10012", protocol: "tcp"}
+	addr            = net.IPNet{IP: net.ParseIP("::1")}
 	maxFetchWaitMs  = 2000
 	maxFetchRecord  = 1
 	pulsarClient, _ = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
@@ -66,19 +67,6 @@ var (
 	}
 	kafsarServer = KafsarImpl{}
 )
-
-type Addr struct {
-	ip       string
-	port     string
-	protocol string
-}
-
-func (a *Addr) Network() string {
-	return a.protocol
-}
-func (a *Addr) String() string {
-	return a.ip + ":" + a.port
-}
 
 func TestFetchPartitionNoMessage(t *testing.T) {
 	topic := uuid.New().String()

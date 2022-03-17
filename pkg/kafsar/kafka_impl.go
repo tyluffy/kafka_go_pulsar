@@ -19,7 +19,7 @@ package kafsar
 
 import (
 	"container/list"
-	"encoding/json"
+	"context"
 	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go/pkg/service"
@@ -104,20 +104,17 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 	}
 	var records []*service.Record
 	recordBatch := service.RecordBatch{Records: records}
-	fetchStart := time.Now()
 	var baseOffset int64
 	fistMessage := true
+	fetchStart := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(k.kafsarConfig.MaxFetchWaitMs)*time.Millisecond)
+	defer cancel()
+OUT:
 	for {
-		timeTicker := make(chan bool, 1)
-		go func() {
-			time.Sleep(time.Duration(k.kafsarConfig.MaxFetchWaitMs) * time.Millisecond)
-			timeTicker <- true
-		}()
 		select {
 		case channel := <-consumerMetadata.channel:
 			message := channel.Message
 			logrus.Infof("receive msg: %s from %s", message.ID(), message.Topic())
-			_, _ = json.Marshal(message.Properties())
 			offset := convOffset(message, k.kafsarConfig.ContinuousOffset)
 			if fistMessage {
 				fistMessage = false
@@ -133,11 +130,12 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 				messageId: message.ID(),
 				offset:    offset,
 			})
-		case <-timeTicker:
+			if time.Since(fetchStart).Milliseconds() >= int64(k.kafsarConfig.MaxFetchWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
+				break OUT
+			}
+		case <-ctx.Done():
 			logrus.Debugf("fetch empty message for topic %s", fullNameTopic)
-		}
-		if time.Since(fetchStart).Milliseconds() >= int64(k.kafsarConfig.MaxFetchWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
-			break
+			break OUT
 		}
 	}
 	recordBatch.Offset = baseOffset
