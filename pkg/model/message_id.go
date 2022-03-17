@@ -15,20 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package constant
+package model
 
-const (
-	DefaultOffset = int64(0)
-	UnknownOffset = int64(-1)
-
-	TimeEarliest = int64(-2)
-	TimeLasted   = int64(-1)
-
-	OffsetReaderEarliestName = "OFFSET_LIST_EARLIEST"
-
-	PartitionSuffixFormat = "-partition-%d"
-)
-
-const (
-	LastMsgIdUrl = "/admin/v2/persistent/%s/%s/%s/lastMessageId"
-)
+type MessageID struct {
+	LedgerID     int64
+	EntryID      int64
+	BatchIdx     int32
+	PartitionIdx int32
+}

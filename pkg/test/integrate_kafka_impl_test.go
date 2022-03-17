@@ -49,6 +49,7 @@ var (
 	addr            = net.IPNet{IP: net.ParseIP("::1")}
 	maxFetchWaitMs  = 2000
 	maxFetchRecord  = 1
+	pulsarHttpUrl   = "http://localhost:8080"
 	pulsarClient, _ = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
 	config          = &kafsar.Config{
 		KafsarConfig: kafsar.KafsarConfig{

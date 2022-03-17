@@ -209,18 +209,27 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *servic
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	var message pulsar.Message
+	offset := constant.DefaultOffset
+	if req.Time == constant.TimeLasted {
+		msg, err := utils.GetLatestMsgId(topic, fullTopicName, req.PartitionId, k.getPulsarHttpUrl())
+		if err != nil {
+			return &service.ListOffsetsPartitionResp{
+				PartitionId: req.PartitionId,
+				Offset:      offset,
+				Time:        constant.TimeEarliest,
+			}, nil
+		}
+		lastedMsg := utils.ReadLastedMsg(fullTopicName, k.kafsarConfig.MaxFetchWaitMs, req.PartitionId, msg, k.pulsarClient)
+		if lastedMsg != nil {
+			offset = convOffset(lastedMsg, k.kafsarConfig.ContinuousOffset)
+		}
+	}
 	if req.Time == constant.TimeEarliest {
-		message = utils.ReadEarliestMsg(fullTopicName, k.kafsarConfig.MaxFetchWaitMs, req.PartitionId, k.pulsarClient)
+		message := utils.ReadEarliestMsg(fullTopicName, k.kafsarConfig.MaxFetchWaitMs, req.PartitionId, k.pulsarClient)
+		if message != nil {
+			offset = convOffset(message, k.kafsarConfig.ContinuousOffset)
+		}
 	}
-	if message == nil {
-		return &service.ListOffsetsPartitionResp{
-			PartitionId: req.PartitionId,
-			Offset:      constant.DefaultOffset,
-			Time:        constant.TimeEarliest,
-		}, nil
-	}
-	offset := convOffset(message, k.kafsarConfig.ContinuousOffset)
 	return &service.ListOffsetsPartitionResp{
 		PartitionId: req.PartitionId,
 		Offset:      offset,
@@ -374,4 +383,8 @@ func (k *KafkaImpl) createConsumer(topic string, partition int, subscriptionName
 		return nil, nil, err
 	}
 	return channel, consumer, nil
+}
+
+func (k *KafkaImpl) getPulsarHttpUrl() string {
+	return fmt.Sprintf("http://%s:%d", k.pulsarConfig.Host, k.pulsarConfig.HttpPort)
 }
