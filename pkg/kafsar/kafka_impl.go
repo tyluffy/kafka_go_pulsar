@@ -120,7 +120,7 @@ OUT:
 				fistMessage = false
 				baseOffset = offset
 			}
-			relativeOffset := baseOffset - offset
+			relativeOffset := offset - baseOffset
 			record := service.Record{
 				Value:          message.Payload(),
 				RelativeOffset: int(relativeOffset),

@@ -77,7 +77,6 @@ public class KafkaConsumeMsgTest {
                 TimeUnit.MILLISECONDS.sleep(200);
                 continue;
             }
-            Assertions.assertEquals(1, consumerRecords.count());
             ConsumerRecord<String, String> consumerRecord = consumerRecords.iterator().next();
             Assertions.assertEquals(msg + "1", consumerRecord.value());
             break;

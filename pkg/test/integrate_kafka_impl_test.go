@@ -130,7 +130,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 func TestFetchAndCommitOffset(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
-	pulsarTopic := defaultTopicType + topicPrefix + topic + fmt.Sprintf(constant.PartitionSuffixFormat, partition)
+	pulsarTopic := defaultTopicType + topicPrefix + topic
 	setupPulsar()
 	k := kafsar.NewKafsar(kafsarServer, config)
 	err := k.InitGroupCoordinator()
@@ -186,7 +186,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
-	offset := fetchPartitionResp.RecordBatch.Records[0].RelativeOffset
+	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
 	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 	// offset commit
 	offsetCommitPartitionReq := service.OffsetCommitPartitionReq{
