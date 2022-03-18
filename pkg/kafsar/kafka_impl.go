@@ -83,7 +83,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.Fet
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	logrus.Infof("%s fetch topic: %s", addr.String(), topic)
+	logrus.Infof("%s fetch topic: %s partition %d", addr.String(), topic, req.PartitionId)
 	fullNameTopic, err := k.server.KafkaConsumeTopic(user.username, topic)
 	if err != nil {
 		logrus.Errorf("fetch partition failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
