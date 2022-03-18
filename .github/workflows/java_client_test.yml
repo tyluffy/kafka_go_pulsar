@@ -42,4 +42,4 @@ jobs:
       - name: wait kafsar start
         run: sleep 90
       - name: run java client test
-        run: cd java-client-tests; gradle test
+        run: cd java-client-tests; gradle clean test

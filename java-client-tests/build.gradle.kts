@@ -31,9 +31,14 @@ dependencies {
     testImplementation("org.apache.kafka:kafka-clients:2.4.0")
     testImplementation("org.apache.pulsar:pulsar-client-admin-original:2.9.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.22")
+    testCompileOnly("org.projectlombok:lombok:1.18.22")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
 tasks.getByName<Test>("test") {
+    this.testLogging {
+        this.showStandardStreams = true
+    }
     useJUnitPlatform()
 }

@@ -213,6 +213,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *servic
 	if req.Time == constant.TimeLasted {
 		msg, err := utils.GetLatestMsgId(topic, fullTopicName, req.PartitionId, k.getPulsarHttpUrl())
 		if err != nil {
+			logrus.Errorf("get topic %s latest offset failed %s\n", topic, err)
 			return &service.ListOffsetsPartitionResp{
 				PartitionId: req.PartitionId,
 				Offset:      offset,
@@ -330,6 +331,11 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		Metadata:    nil,
 		ErrorCode:   int16(service.NONE),
 	}, nil
+}
+
+func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.OffsetLeaderEpochPartitionReq) (*service.OffsetLeaderEpochPartitionResp, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, service.ErrorCode) {
