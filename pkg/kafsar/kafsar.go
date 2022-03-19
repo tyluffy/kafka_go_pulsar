@@ -56,6 +56,11 @@ type KafsarConfig struct {
 }
 
 type Broker struct {
+	impl *KafkaImpl
+}
+
+func (b *Broker) Close() {
+	b.impl.Close()
 }
 
 func Run(config *Config, impl Server) (*Broker, error) {
@@ -72,8 +77,7 @@ func Run(config *Config, impl Server) (*Broker, error) {
 		config.KafsarConfig.OffsetManager = NewOffsetManager(producer, consumer)
 	}
 	logrus.Info("kafsar started")
-	k := NewKafsar(impl, config)
-	err := k.ConnPulsar()
+	k, err := NewKafsar(impl, config)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +89,7 @@ func Run(config *Config, impl Server) (*Broker, error) {
 	if err != nil {
 		return nil, err
 	}
-	broker := &Broker{}
+	broker := &Broker{impl: k}
 	return broker, nil
 }
 

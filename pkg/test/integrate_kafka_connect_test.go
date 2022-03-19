@@ -28,7 +28,8 @@ import (
 
 func TestKafkaConnect(t *testing.T) {
 	setupPulsar()
-	_, port := setupKafsar()
+	broker, port := setupKafsar()
+	defer broker.Close()
 	time.Sleep(3 * time.Second)
 	topic := "my-topic"
 	partition := 0

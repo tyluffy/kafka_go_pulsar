@@ -53,12 +53,18 @@ type MessageIdPair struct {
 	Offset    int64
 }
 
-func NewKafsar(impl Server, config *Config) *KafkaImpl {
+func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	kafka := KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
+	pulsarUrl := fmt.Sprintf("pulsar://%s:%d", kafka.pulsarConfig.Host, kafka.pulsarConfig.TcpPort)
+	var err error
+	kafka.pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{URL: pulsarUrl})
+	if err != nil {
+		return nil, err
+	}
 	kafka.consumerManager = make(map[string]*ConsumerMetadata)
 	kafka.userInfoManager = make(map[string]*userInfo)
 	kafka.offsetManager = config.KafsarConfig.OffsetManager
-	return &kafka
+	return &kafka, nil
 }
 
 func (k *KafkaImpl) InitGroupCoordinator() (err error) {
@@ -68,12 +74,6 @@ func (k *KafkaImpl) InitGroupCoordinator() (err error) {
 
 func (k *KafkaImpl) Produce(addr net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
 	panic("implement me")
-}
-
-func (k *KafkaImpl) ConnPulsar() (err error) {
-	pulsarUrl := fmt.Sprintf("pulsar://%s:%d", k.pulsarConfig.Host, k.pulsarConfig.TcpPort)
-	k.pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{URL: pulsarUrl})
-	return
 }
 
 func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.FetchPartitionReq) (*service.FetchPartitionResp, error) {
@@ -374,6 +374,10 @@ func (k *KafkaImpl) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, co
 func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	logrus.Infof("lost connection: %s", addr)
 	delete(k.userInfoManager, addr.String())
+}
+
+func (k *KafkaImpl) Close() {
+	k.pulsarClient.Close()
 }
 
 func (k *KafkaImpl) createConsumer(topic string, partition int, subscriptionName string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {

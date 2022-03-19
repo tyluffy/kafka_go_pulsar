@@ -77,10 +77,10 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := topicPrefix + topic
 	setupPulsar()
-	k := kafsar.NewKafsar(kafsarServer, config)
-	err := k.InitGroupCoordinator()
+	k, err := kafsar.NewKafsar(kafsarServer, config)
 	assert.Nil(t, err)
-	err = k.ConnPulsar()
+	defer k.Close()
+	err = k.InitGroupCoordinator()
 	assert.Nil(t, err)
 
 	// sasl auth
@@ -132,10 +132,11 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := defaultTopicType + topicPrefix + topic
 	setupPulsar()
-	k := kafsar.NewKafsar(kafsarServer, config)
-	err := k.InitGroupCoordinator()
-	assert.Nil(t, err)
-	err = k.ConnPulsar()
+	k, err := kafsar.NewKafsar(kafsarServer, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = k.InitGroupCoordinator()
 	assert.Nil(t, err)
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
 	assert.Nil(t, err)
