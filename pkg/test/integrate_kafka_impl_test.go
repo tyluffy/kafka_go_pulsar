@@ -41,17 +41,15 @@ var (
 		ProtocolName:     "range",
 		ProtocolMetadata: "000100000001000474657374ffffffff00000000",
 	}
-	groupProtocol   []*service.GroupProtocol
-	protocols       = append(groupProtocol, &protocol)
-	partition       = 0
-	testClientId    = "consumer-test-client-id"
-	testContent     = "test-content"
-	addr            = net.IPNet{IP: net.ParseIP("::1")}
-	maxFetchWaitMs  = 2000
-	maxFetchRecord  = 1
-	pulsarHttpUrl   = "http://localhost:8080"
-	pulsarClient, _ = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
-	config          = &kafsar.Config{
+	groupProtocol  []*service.GroupProtocol
+	protocols      = append(groupProtocol, &protocol)
+	partition      = 0
+	testClientId   = "consumer-test-client-id"
+	testContent    = "test-content"
+	addr           = net.IPNet{IP: net.ParseIP("::1")}
+	maxFetchWaitMs = 2000
+	maxFetchRecord = 1
+	config         = &kafsar.Config{
 		KafsarConfig: kafsar.KafsarConfig{
 			MaxConsumersPerGroup:     1,
 			GroupMinSessionTimeoutMs: 0,
