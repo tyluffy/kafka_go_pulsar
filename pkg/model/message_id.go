@@ -23,3 +23,8 @@ type MessageID struct {
 	BatchIdx     int32
 	PartitionIdx int32
 }
+
+type MessageIdData struct {
+	MessageId []byte
+	Offset    int64
+}

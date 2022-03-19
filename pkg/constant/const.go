@@ -17,6 +17,8 @@
 
 package constant
 
+import "time"
+
 const (
 	DefaultOffset = int64(0)
 	UnknownOffset = int64(-1)
@@ -25,6 +27,9 @@ const (
 	TimeLasted   = int64(-1)
 
 	OffsetReaderEarliestName = "OFFSET_LIST_EARLIEST"
+
+	DefaultProducerSendTimeout = 1 * time.Second
+	DefaultMaxPendingMs        = 100
 
 	PartitionSuffixFormat = "-partition-%d"
 )

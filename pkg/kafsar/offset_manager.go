@@ -18,8 +18,11 @@
 package kafsar
 
 type OffsetManager interface {
-    // commitOffset topic is kafka topic
-    commitOffset(username, topic, groupId string, partition int, offset int64) error
-    // acquireOffset topic is kafka topic
-    acquireOffset(username, topic, groupId string, partition int) (int64, bool)
+	CommitOffset(username, kafkaTopic, groupId string, partition int, pair MessageIdPair) error
+
+	AcquireOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool)
+
+	RemoveOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool)
+
+	Close()
 }

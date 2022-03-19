@@ -40,6 +40,7 @@ type KafkaImpl struct {
 	consumerManager  map[string]*ConsumerMetadata
 	mutex            sync.RWMutex
 	userInfoManager  map[string]*userInfo
+	offsetManager    OffsetManager
 }
 
 type userInfo struct {
@@ -47,15 +48,16 @@ type userInfo struct {
 	clientId string
 }
 
-type messageIdPair struct {
-	messageId pulsar.MessageID
-	offset    int64
+type MessageIdPair struct {
+	MessageId pulsar.MessageID
+	Offset    int64
 }
 
 func NewKafsar(impl Server, config *Config) *KafkaImpl {
 	kafka := KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
 	kafka.consumerManager = make(map[string]*ConsumerMetadata)
 	kafka.userInfoManager = make(map[string]*userInfo)
+	kafka.offsetManager = config.KafsarConfig.OffsetManager
 	return &kafka
 }
 
@@ -126,9 +128,9 @@ OUT:
 				RelativeOffset: int(relativeOffset),
 			}
 			recordBatch.Records = append(recordBatch.Records, &record)
-			consumerMetadata.messageIds.PushBack(messageIdPair{
-				messageId: message.ID(),
-				offset:    offset,
+			consumerMetadata.messageIds.PushBack(MessageIdPair{
+				MessageId: message.ID(),
+				Offset:    offset,
 			})
 			if time.Since(fetchStart).Milliseconds() >= int64(k.kafsarConfig.MaxFetchWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
 				break OUT
@@ -266,12 +268,12 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, topic string, req *serv
 	ids := consumerMessages.messageIds
 	front := ids.Front()
 	for element := front; element != nil; element = element.Next() {
-		messageIdPair := element.Value.(messageIdPair)
-		if messageIdPair.offset > req.OffsetCommitOffset {
+		messageIdPair := element.Value.(MessageIdPair)
+		if messageIdPair.Offset > req.OffsetCommitOffset {
 			break
 		}
-		logrus.Infof("ack pulsar %s for %s", fullNameTopic, messageIdPair.messageId)
-		consumerMessages.consumer.AckID(messageIdPair.messageId)
+		logrus.Infof("ack pulsar %s for %s", fullNameTopic, messageIdPair.MessageId)
+		consumerMessages.consumer.AckID(messageIdPair.MessageId)
 		consumerMessages.messageIds.Remove(element)
 	}
 	return &service.OffsetCommitPartitionResp{

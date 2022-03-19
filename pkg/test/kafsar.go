@@ -50,6 +50,9 @@ func setupKafsarInternal(port int) (*kafsar.Broker, error) {
 	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
 	config.KafsarConfig.MaxFetchRecord = 10
 	config.KafsarConfig.MaxFetchWaitMs = 100
+	config.KafsarConfig.PulsarTenant = "public"
+	config.KafsarConfig.PulsarNamespace = "default"
+	config.KafsarConfig.OffsetTopic = "kafka_offset"
 	kafsarImpl := &KafsarImpl{}
 	return kafsar.Run(config, kafsarImpl)
 }
