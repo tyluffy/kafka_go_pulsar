@@ -21,6 +21,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/google/uuid"
+	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/model"
 	"github.com/sirupsen/logrus"
 	"strconv"
@@ -34,14 +36,23 @@ type OffsetManagerImpl struct {
 	mutex     sync.RWMutex
 }
 
-func NewOffsetManager(producer pulsar.Producer, consumer pulsar.Consumer) OffsetManager {
+func NewOffsetManager(client pulsar.Client, config KafsarConfig) (OffsetManager, error) {
+	consumer, err := GetOffsetConsumer(client, config)
+	if err != nil {
+		return nil, err
+	}
+	producer, err := GetOffsetProducer(client, config)
+	if err != nil {
+		consumer.Close()
+		return nil, err
+	}
 	impl := OffsetManagerImpl{
 		producer:  producer,
 		consumer:  consumer,
 		offsetMap: make(map[string]MessageIdPair),
 	}
 	impl.startOffsetConsumer()
-	return &impl
+	return &impl, nil
 }
 
 func (o *OffsetManagerImpl) startOffsetConsumer() {
@@ -131,4 +142,36 @@ func (o *OffsetManagerImpl) Close() {
 
 func (o *OffsetManagerImpl) generateKey(username, kafkaTopic, groupId string, partition int) string {
 	return username + kafkaTopic + groupId + strconv.Itoa(partition)
+}
+
+func GetOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consumer, error) {
+	newUUID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
+	offsetTopic := getOffsetTopic(config)
+	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
+		Topic:            offsetTopic,
+		Type:             pulsar.Failover,
+		SubscriptionName: newUUID.String(),
+	})
+	if err != nil {
+		logrus.Errorf("subscribe consumer failed. topic: %s, err: %s", offsetTopic, err)
+		return nil, err
+	}
+	return consumer, nil
+}
+
+func GetOffsetProducer(client pulsar.Client, config KafsarConfig) (pulsar.Producer, error) {
+	options := pulsar.ProducerOptions{}
+	options.Topic = getOffsetTopic(config)
+	options.SendTimeout = constant.DefaultProducerSendTimeout
+	options.MaxPendingMessages = constant.DefaultMaxPendingMs
+	options.DisableBlockIfQueueFull = true
+	producer, err := client.CreateProducer(options)
+	if err != nil {
+		logrus.Errorf("create producer failed. topic: %s, err: %s", options.Topic, err)
+		return nil, err
+	}
+	return producer, nil
 }

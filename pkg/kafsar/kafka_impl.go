@@ -61,15 +61,14 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	if err != nil {
 		return nil, err
 	}
+	kafka.offsetManager, err = NewOffsetManager(kafka.pulsarClient, config.KafsarConfig)
+	if err != nil {
+		kafka.pulsarClient.Close()
+	}
+	kafka.groupCoordinator = NewGroupCoordinator(kafka.pulsarConfig, kafka.kafsarConfig, kafka.pulsarClient)
 	kafka.consumerManager = make(map[string]*ConsumerMetadata)
 	kafka.userInfoManager = make(map[string]*userInfo)
-	kafka.offsetManager = config.KafsarConfig.OffsetManager
 	return &kafka, nil
-}
-
-func (k *KafkaImpl) InitGroupCoordinator() (err error) {
-	k.groupCoordinator = NewGroupCoordinator(k.pulsarConfig, k.kafsarConfig, k.pulsarClient)
-	return
 }
 
 func (k *KafkaImpl) Produce(addr net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
@@ -377,6 +376,7 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 }
 
 func (k *KafkaImpl) Close() {
+	k.offsetManager.Close()
 	k.pulsarClient.Close()
 }
 

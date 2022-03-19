@@ -34,11 +34,14 @@ func TestOffsetManager(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := defaultTopicType + topicPrefix + topic
 	setupPulsar()
-	offsetProducer, err := kafsar.GetOffsetProducer(pulsarClient, config)
-	assert.Nil(t, err)
-	offsetConsumer, err := kafsar.GetOffsetConsumer(pulsarClient, config)
-	assert.Nil(t, err)
-	manager := kafsar.NewOffsetManager(offsetProducer, offsetConsumer)
+	manager, err := kafsar.NewOffsetManager(pulsarClient, kafsar.KafsarConfig{
+		PulsarTenant:    "public",
+		PulsarNamespace: "default",
+		OffsetTopic:     "kafka_offset",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer manager.Close()
 
 	// wait for manager start

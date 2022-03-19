@@ -80,8 +80,6 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	k, err := kafsar.NewKafsar(kafsarServer, config)
 	assert.Nil(t, err)
 	defer k.Close()
-	err = k.InitGroupCoordinator()
-	assert.Nil(t, err)
 
 	// sasl auth
 	saslReq := service.SaslReq{
@@ -136,8 +134,6 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = k.InitGroupCoordinator()
-	assert.Nil(t, err)
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
 	assert.Nil(t, err)
 	message := pulsar.ProducerMessage{Value: testContent}
