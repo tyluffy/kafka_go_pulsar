@@ -45,7 +45,7 @@ const (
 )
 
 type Group struct {
-	topic            string
+	partitionedTopic string
 	groupId          string
 	groupStatus      GroupStatus
 	groupProtocols   []*service.GroupProtocol

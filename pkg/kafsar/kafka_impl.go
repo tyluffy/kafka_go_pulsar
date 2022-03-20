@@ -202,7 +202,8 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 	group, exist := k.groupCoordinator.groupManager[req.GroupId]
 	k.groupCoordinator.mutex.RUnlock()
 	if exist {
-		delete(k.consumerManager, group.topic)
+		k.consumerManager[group.partitionedTopic].consumer.Close()
+		delete(k.consumerManager, group.partitionedTopic)
 	}
 	return leaveGroupResp, nil
 }
@@ -348,7 +349,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	k.mutex.RLock()
 	group := k.groupCoordinator.groupManager[req.GroupId]
 	k.mutex.RUnlock()
-	group.topic = partitionedTopic
+	group.partitionedTopic = partitionedTopic
 	group.consumerMetadata = consumerMetadata
 	return &service.OffsetFetchPartitionResp{
 		PartitionId: req.PartitionId,
