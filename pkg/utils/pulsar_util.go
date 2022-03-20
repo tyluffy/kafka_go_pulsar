@@ -46,14 +46,14 @@ func ReadEarliestMsg(partitionedTopic string, maxWaitMs int, pulsarClient pulsar
 	return readNextMsg(readerOptions, maxWaitMs, pulsarClient)
 }
 
-func GetLatestMsgId(topic, partitionedTopic string, partition int, addr string) (msg []byte, err error) {
-	tenant, namespace, err := getTenantAndNamespace(partitionedTopic)
+func GetLatestMsgId(partitionedTopic, addr string) (msg []byte, err error) {
+	tenant, namespace, shortPartitionedTopic, err := getTenantNamespaceTopicFromPartitionedTopic(partitionedTopic)
 	if err != nil {
 		logrus.Errorf("get tenant and namespace failed. topic: %s, err: %s", partitionedTopic, err)
 		return nil, err
 	}
 	urlFormat := addr + constant.LastMsgIdUrl
-	url := fmt.Sprintf(urlFormat, tenant, namespace, topic+fmt.Sprintf(constant.PartitionSuffixFormat, partition))
+	url := fmt.Sprintf(urlFormat, tenant, namespace, shortPartitionedTopic)
 	msg, err = HttpGet(url, nil, nil)
 	if err != nil {
 		logrus.Errorf("unmarshal message id failed., topic: %s, err: %s", partitionedTopic, err)
@@ -88,19 +88,19 @@ func ReadLastedMsg(partitionedTopic string, maxWaitMs int, msgIdBytes []byte, pu
 	return readNextMsg(readerOptions, maxWaitMs, pulsarClient)
 }
 
-func getTenantAndNamespace(topic string) (tenant, namespace string, err error) {
-	if strings.Contains(topic, "//") {
-		topicArr := strings.Split(topic, "//")
+func getTenantNamespaceTopicFromPartitionedTopic(partitionedTopic string) (tenant, namespace, shortPartitionedTopic string, err error) {
+	if strings.Contains(partitionedTopic, "//") {
+		topicArr := strings.Split(partitionedTopic, "//")
 		if len(topicArr) < 2 {
-			return "", "", errors.New("get tenant and namespace failed")
+			return "", "", "", errors.New("get tenant and namespace failed")
 		}
 		list := strings.Split(topicArr[1], "/")
 		if len(list) < 3 {
-			return "", "", errors.New("get tenant and namespace failed")
+			return "", "", "", errors.New("get tenant and namespace failed")
 		}
-		return list[0], list[1], nil
+		return list[0], list[1], list[2], nil
 	}
-	return "", "", errors.New("get tenant and namespace failed")
+	return "", "", "", errors.New("get tenant and namespace failed")
 }
 
 func readNextMsg(operation pulsar.ReaderOptions, maxWaitMs int, pulsarClient pulsar.Client) pulsar.Message {

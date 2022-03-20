@@ -71,7 +71,7 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	return &kafka, nil
 }
 
-func (k *KafkaImpl) Produce(addr net.Addr, topic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
+func (k *KafkaImpl) Produce(addr net.Addr, kafkaTopic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
 	panic("implement me")
 }
 
@@ -98,19 +98,19 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 }
 
 // FetchPartition visible for testing
-func (k *KafkaImpl) FetchPartition(addr net.Addr, topic string, req *service.FetchPartitionReq, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
+func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
 	user, exist := k.userInfoManager[addr.String()]
 	if !exist {
-		logrus.Errorf("fetch partition failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
+		logrus.Errorf("fetch partition failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
 		}
 	}
-	logrus.Infof("%s fetch topic: %s partition %d", addr.String(), topic, req.PartitionId)
-	partitionedTopic, err := k.consumePartitionedTopic(user, topic, req.PartitionId)
+	logrus.Infof("%s fetch topic: %s partition %d", addr.String(), kafkaTopic, req.PartitionId)
+	partitionedTopic, err := k.consumePartitionedTopic(user, kafkaTopic, req.PartitionId)
 	if err != nil {
-		logrus.Errorf("fetch partition failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
+		logrus.Errorf("fetch partition failed when get pulsar topic %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
@@ -219,16 +219,16 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 	return syncGroupResp, nil
 }
 
-func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
+func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
 	user, exist := k.userInfoManager[addr.String()]
 	if !exist {
-		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), topic)
+		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.ListOffsetsPartitionResp{
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	logrus.Infof("%s offset list topic: %s, partition: %d", addr.String(), topic, req.PartitionId)
-	partitionedTopic, err := k.consumePartitionedTopic(user, topic, req.PartitionId)
+	logrus.Infof("%s offset list topic: %s, partition: %d", addr.String(), kafkaTopic, req.PartitionId)
+	partitionedTopic, err := k.consumePartitionedTopic(user, kafkaTopic, req.PartitionId)
 	if err != nil {
 		logrus.Errorf("get topic failed. err: %s", err)
 		return &service.ListOffsetsPartitionResp{
@@ -237,9 +237,9 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *servic
 	}
 	offset := constant.DefaultOffset
 	if req.Time == constant.TimeLasted {
-		msg, err := utils.GetLatestMsgId(topic, partitionedTopic, req.PartitionId, k.getPulsarHttpUrl())
+		msg, err := utils.GetLatestMsgId(partitionedTopic, k.getPulsarHttpUrl())
 		if err != nil {
-			logrus.Errorf("get topic %s latest offset failed %s\n", topic, err)
+			logrus.Errorf("get topic %s latest offset failed %s\n", kafkaTopic, err)
 			return &service.ListOffsetsPartitionResp{
 				PartitionId: req.PartitionId,
 				Offset:      offset,
@@ -264,19 +264,19 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, topic string, req *servic
 	}, nil
 }
 
-func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, topic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
+func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
 	user, exist := k.userInfoManager[addr.String()]
 	if !exist {
-		logrus.Errorf("offset commit failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
+		logrus.Errorf("offset commit failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	logrus.Infof("%s topic: %s, partition: %d, commit offset: %d", addr.String(), topic, req.PartitionId, req.OffsetCommitOffset)
-	partitionedTopic, err := k.consumePartitionedTopic(user, topic, req.PartitionId)
+	logrus.Infof("%s topic: %s, partition: %d, commit offset: %d", addr.String(), kafkaTopic, req.PartitionId, req.OffsetCommitOffset)
+	partitionedTopic, err := k.consumePartitionedTopic(user, kafkaTopic, req.PartitionId)
 	if err != nil {
-		logrus.Errorf("offset commit failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
+		logrus.Errorf("offset commit failed when get pulsar topic %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,

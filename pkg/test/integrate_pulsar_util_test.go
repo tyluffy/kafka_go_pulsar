@@ -70,7 +70,7 @@ func TestReadLatestMsg(t *testing.T) {
 	logrus.Infof("send msg to pulsar %s", messageId)
 	assert.Nil(t, err)
 	readPartitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
-	msg, err := utils.GetLatestMsgId(topicPrefix+topic, readPartitionedTopic, partition, pulsarHttpUrl)
+	msg, err := utils.GetLatestMsgId(readPartitionedTopic, pulsarHttpUrl)
 	logrus.Infof("msgId : %s", string(msg))
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
