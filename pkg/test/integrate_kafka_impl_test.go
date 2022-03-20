@@ -54,6 +54,7 @@ var (
 			MaxConsumersPerGroup:     1,
 			GroupMinSessionTimeoutMs: 0,
 			GroupMaxSessionTimeoutMs: 30000,
+			MinFetchWaitMs:           10,
 			MaxFetchWaitMs:           maxFetchWaitMs,
 			MaxFetchRecord:           maxFetchRecord,
 			ContinuousOffset:         false,

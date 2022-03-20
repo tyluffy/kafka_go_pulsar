@@ -56,6 +56,7 @@ func main() {
 	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000
 	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
 	config.KafsarConfig.MaxFetchRecord = 100
+	config.KafsarConfig.MinFetchWaitMs = 10
 	config.KafsarConfig.MaxFetchWaitMs = 200
 	config.KafsarConfig.ContinuousOffset = false
 	config.KafsarConfig.PulsarTenant = "public"

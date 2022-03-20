@@ -40,6 +40,7 @@ type KafsarConfig struct {
 	GroupMaxSessionTimeoutMs int
 	ConsumerReceiveQueueSize int
 	MaxFetchRecord           int
+	MinFetchWaitMs           int
 	MaxFetchWaitMs           int
 	ContinuousOffset         bool
 	// PulsarTenant use for kafsar internal

@@ -131,6 +131,9 @@ OUT:
 				MessageId: message.ID(),
 				Offset:    offset,
 			})
+			if time.Since(fetchStart).Milliseconds() < int64(k.kafsarConfig.MinFetchWaitMs) {
+				continue
+			}
 			if time.Since(fetchStart).Milliseconds() >= int64(k.kafsarConfig.MaxFetchWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
 				break OUT
 			}

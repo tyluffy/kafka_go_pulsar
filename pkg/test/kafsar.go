@@ -49,6 +49,7 @@ func setupKafsarInternal(port int) (*kafsar.Broker, error) {
 	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000
 	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
 	config.KafsarConfig.MaxFetchRecord = 10
+	config.KafsarConfig.MinFetchWaitMs = 10
 	config.KafsarConfig.MaxFetchWaitMs = 100
 	config.KafsarConfig.PulsarTenant = "public"
 	config.KafsarConfig.PulsarNamespace = "default"
