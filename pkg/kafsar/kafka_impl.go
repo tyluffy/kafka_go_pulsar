@@ -294,6 +294,16 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 	front := ids.Front()
 	for element := front; element != nil; element = element.Next() {
 		messageIdPair := element.Value.(MessageIdPair)
+		if messageIdPair.Offset == req.OffsetCommitOffset {
+			err := k.offsetManager.CommitOffset(user.username, kafkaTopic, consumerMessages.groupId, req.PartitionId, messageIdPair)
+			if err != nil {
+				logrus.Errorf("commit offset failed. topic: %s, err: %s", kafkaTopic, err)
+				return &service.OffsetCommitPartitionResp{
+					PartitionId: req.PartitionId,
+					ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+				}, nil
+			}
+		}
 		if messageIdPair.Offset > req.OffsetCommitOffset {
 			break
 		}
@@ -412,6 +422,10 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 func (k *KafkaImpl) Close() {
 	k.offsetManager.Close()
 	k.pulsarClient.Close()
+}
+
+func (k *KafkaImpl) GetOffsetManager() OffsetManager {
+	return k.offsetManager
 }
 
 func (k *KafkaImpl) createConsumer(topic string, partition int, subscriptionName string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {

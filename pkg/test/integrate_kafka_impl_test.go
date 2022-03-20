@@ -193,4 +193,9 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
 	assert.Nil(t, err)
 	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
+	//acquire offset
+	time.Sleep(5 * time.Second)
+	acquireOffset, b := k.GetOffsetManager().AcquireOffset(username, topic, groupId, partition)
+	assert.True(t, b)
+	assert.Equal(t, acquireOffset.Offset, offset)
 }

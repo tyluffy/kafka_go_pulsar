@@ -40,6 +40,6 @@ jobs:
       - name: run kafsar
         run: docker run -p 9092:9092 -p 6650:6650 -p 8080:8080 -d kafsar-unit-test
       - name: wait kafsar start
-        run: sleep 90
+        run: sleep 30
       - name: run java client test
         run: cd java-client-tests; gradle clean test
