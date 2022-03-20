@@ -19,10 +19,8 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/google/uuid"
-	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -31,17 +29,19 @@ import (
 
 func TestReadEarliestMsg(t *testing.T) {
 	topic := uuid.New().String()
-	pulsarTopic := defaultTopicType + topicPrefix + topic + fmt.Sprintf(constant.PartitionSuffixFormat, partition)
+	partitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	setupPulsar()
-	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
+	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: partitionedTopic})
 	assert.Nil(t, err)
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
 	logrus.Infof("send msg to pulsar %s", messageId)
 	assert.Nil(t, err)
-	readTopic := defaultTopicType + topicPrefix + topic
-	msg := utils.ReadEarliestMsg(readTopic, maxFetchWaitMs, partition, pulsarClient)
-	assert.NotNil(t, msg)
+	readTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
+	msg := utils.ReadEarliestMsg(readTopic, maxFetchWaitMs, pulsarClient)
+	if msg == nil {
+		t.Fatal("msg is nil")
+	}
 	assert.Equal(t, msg.ID().LedgerID(), messageId.LedgerID())
 	assert.Equal(t, msg.ID().EntryID(), messageId.EntryID())
 	assert.Equal(t, msg.ID().PartitionIdx(), messageId.PartitionIdx())
@@ -49,9 +49,9 @@ func TestReadEarliestMsg(t *testing.T) {
 
 func TestReadLatestMsg(t *testing.T) {
 	topic := uuid.New().String()
-	pulsarTopic := defaultTopicType + topicPrefix + topic + fmt.Sprintf(constant.PartitionSuffixFormat, partition)
+	partitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	setupPulsar()
-	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
+	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: partitionedTopic})
 	assert.Nil(t, err)
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
@@ -69,12 +69,12 @@ func TestReadLatestMsg(t *testing.T) {
 	messageId, err = producer.Send(context.TODO(), &message)
 	logrus.Infof("send msg to pulsar %s", messageId)
 	assert.Nil(t, err)
-	readTopic := defaultTopicType + topicPrefix + topic
-	msg, err := utils.GetLatestMsgId(topicPrefix+topic, readTopic, partition, pulsarHttpUrl)
+	readPartitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
+	msg, err := utils.GetLatestMsgId(topicPrefix+topic, readPartitionedTopic, partition, pulsarHttpUrl)
 	logrus.Infof("msgId : %s", string(msg))
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
-	lastedMsg := utils.ReadLastedMsg(readTopic, maxFetchWaitMs, partition, msg, pulsarClient)
+	lastedMsg := utils.ReadLastedMsg(readPartitionedTopic, maxFetchWaitMs, msg, pulsarClient)
 	assert.NotNil(t, lastedMsg)
 	assert.Equal(t, lastedMsg.ID().LedgerID(), messageId.LedgerID())
 	assert.Equal(t, lastedMsg.ID().EntryID(), messageId.EntryID())

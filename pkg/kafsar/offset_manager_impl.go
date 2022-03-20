@@ -146,15 +146,13 @@ func (o *OffsetManagerImpl) generateKey(username, kafkaTopic, groupId string, pa
 }
 
 func getOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consumer, error) {
-	newUUID, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
+	subscribeName := uuid.New().String()
+	logrus.Infof("start offset consume subscribe name %s", subscribeName)
 	offsetTopic := getOffsetTopic(config)
 	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
 		Topic:            offsetTopic,
 		Type:             pulsar.Failover,
-		SubscriptionName: newUUID.String(),
+		SubscriptionName: subscribeName,
 	})
 	if err != nil {
 		logrus.Errorf("subscribe consumer failed. topic: %s, err: %s", offsetTopic, err)

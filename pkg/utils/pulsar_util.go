@@ -32,9 +32,13 @@ import (
 	"time"
 )
 
-func ReadEarliestMsg(fullTopic string, maxWaitMs int, partition int, pulsarClient pulsar.Client) pulsar.Message {
+func PartitionedTopic(topic string, partition int) string {
+	return topic + fmt.Sprintf(constant.PartitionSuffixFormat, partition)
+}
+
+func ReadEarliestMsg(partitionedTopic string, maxWaitMs int, pulsarClient pulsar.Client) pulsar.Message {
 	readerOptions := pulsar.ReaderOptions{
-		Topic:          fullTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition),
+		Topic:          partitionedTopic,
 		Name:           constant.OffsetReaderEarliestName,
 		StartMessageID: pulsar.EarliestMessageID(),
 	}
@@ -42,29 +46,29 @@ func ReadEarliestMsg(fullTopic string, maxWaitMs int, partition int, pulsarClien
 	return readNextMsg(readerOptions, maxWaitMs, pulsarClient)
 }
 
-func GetLatestMsgId(topic, fullTopic string, partition int, addr string) (msg []byte, err error) {
-	tenant, namespace, err := getTenantAndNamespace(fullTopic)
+func GetLatestMsgId(topic, partitionedTopic string, partition int, addr string) (msg []byte, err error) {
+	tenant, namespace, err := getTenantAndNamespace(partitionedTopic)
 	if err != nil {
-		logrus.Errorf("get tenant and namespace failed. topic: %s, err: %s", fullTopic, err)
+		logrus.Errorf("get tenant and namespace failed. topic: %s, err: %s", partitionedTopic, err)
 		return nil, err
 	}
 	urlFormat := addr + constant.LastMsgIdUrl
 	url := fmt.Sprintf(urlFormat, tenant, namespace, topic+fmt.Sprintf(constant.PartitionSuffixFormat, partition))
 	msg, err = HttpGet(url, nil, nil)
 	if err != nil {
-		logrus.Errorf("unmarshal message id failed., topic: %s, err: %s", fullTopic, err)
+		logrus.Errorf("unmarshal message id failed., topic: %s, err: %s", partitionedTopic, err)
 		return nil, err
 	}
 	return msg, nil
 }
 
-func ReadLastedMsg(fullTopic string, maxWaitMs int, partition int, msgIdBytes []byte, pulsarClient pulsar.Client) pulsar.Message {
+func ReadLastedMsg(partitionedTopic string, maxWaitMs int, msgIdBytes []byte, pulsarClient pulsar.Client) pulsar.Message {
 	var msgId pulsar.MessageID
 	bytes, err := generateMsgBytes(msgIdBytes)
 	if err != nil {
-		logrus.Errorf("genrate msg bytes failed. topic: %s, err: %s", fullTopic, err)
+		logrus.Errorf("genrate msg bytes failed. topic: %s, err: %s", partitionedTopic, err)
 		readerOptions := pulsar.ReaderOptions{
-			Topic:          fullTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition),
+			Topic:          partitionedTopic,
 			Name:           constant.OffsetReaderEarliestName,
 			StartMessageID: pulsar.EarliestMessageID(),
 		}
@@ -72,11 +76,11 @@ func ReadLastedMsg(fullTopic string, maxWaitMs int, partition int, msgIdBytes []
 	}
 	msgId, err = pulsar.DeserializeMessageID(bytes)
 	if err != nil {
-		logrus.Errorf("deserialize messageId failed. msgBytes: %s, topic: %s, err: %s", string(msgIdBytes), fullTopic, err)
+		logrus.Errorf("deserialize messageId failed. msgBytes: %s, topic: %s, err: %s", string(msgIdBytes), partitionedTopic, err)
 		msgId = pulsar.EarliestMessageID()
 	}
 	readerOptions := pulsar.ReaderOptions{
-		Topic:                   fullTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition),
+		Topic:                   partitionedTopic,
 		Name:                    constant.OffsetReaderEarliestName,
 		StartMessageID:          msgId,
 		StartMessageIDInclusive: true,

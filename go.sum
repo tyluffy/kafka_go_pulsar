@@ -756,6 +756,8 @@ github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFSt
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/paashzj/kafka_go v0.0.6-0.20220319121619-372b5a9dd5d0 h1:PbT1qyrxEbblV+rMZcguBx8jEGalLnP9MMUeyeMJ3G0=
 github.com/paashzj/kafka_go v0.0.6-0.20220319121619-372b5a9dd5d0/go.mod h1:l1qvp4P/u/NC53ppdh0IoARki+ksXCibPREesO3bvQo=
+github.com/paashzj/kafka_go v0.0.6-0.20220320024149-ec71ea2e2a84 h1:Jt8ZFJMRvuRkR2MUkDm8hS+XZF7SCDhDJ0ZY21ARyAM=
+github.com/paashzj/kafka_go v0.0.6-0.20220320024149-ec71ea2e2a84/go.mod h1:l1qvp4P/u/NC53ppdh0IoARki+ksXCibPREesO3bvQo=
 github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d h1:dVFW4jCKOXuCsNNy0FDVfxuuyjfFhqDnJNNbY0MZwTM=
 github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d/go.mod h1:NsnM5j1wiMFSchSATQNKyCfk1W1+nFShd9ecAqTDto4=
 github.com/panjf2000/ants/v2 v2.4.7 h1:MZnw2JRyTJxFwtaMtUJcwE618wKD04POWk2gwwP4E2M=

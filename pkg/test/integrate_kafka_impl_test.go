@@ -25,10 +25,12 @@ import (
 	"github.com/paashzj/kafka_go/pkg/service"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
+	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
+	"time"
 )
 
 var (
@@ -115,8 +117,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 		FetchOffset: offset.Offset,
 		ClientId:    testClientId,
 	}
-	_, err = k.FetchPartition(&addr, topic, &fetchPartitionReq)
-	assert.Nil(t, err)
+	k.FetchPartition(&addr, topic, &fetchPartitionReq, 200, time.Now())
 
 	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition) + "/subscriptions"
 	request, err := HttpGetRequest(url)
@@ -127,7 +128,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 func TestFetchAndCommitOffset(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
-	pulsarTopic := defaultTopicType + topicPrefix + topic
+	pulsarTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	setupPulsar()
 	k, err := kafsar.NewKafsar(kafsarServer, config)
 	if err != nil {
@@ -178,8 +179,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 		ClientId:    testClientId,
 	}
-	fetchPartitionResp, err := k.FetchPartition(&addr, topic, &fetchPartitionReq)
-	assert.Nil(t, err)
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
