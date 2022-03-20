@@ -397,6 +397,10 @@ func (k *KafkaImpl) createConsumer(topic string, partition int, subscriptionName
 	return channel, consumer, nil
 }
 
+func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.HeartBeatResp {
+	return k.groupCoordinator.HandleHeartBeat(req.GroupId)
+}
+
 func (k *KafkaImpl) getPulsarHttpUrl() string {
 	return fmt.Sprintf("http://%s:%d", k.pulsarConfig.Host, k.pulsarConfig.HttpPort)
 }

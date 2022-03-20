@@ -248,3 +248,28 @@ func (gci *GroupCoordinatorImpl) HandleLeaveGroup(groupId string,
 	group.consumerMetadata = nil
 	return &service.LeaveGroupResp{ErrorCode: service.NONE, Members: members}, nil
 }
+
+func (gci *GroupCoordinatorImpl) HandleHeartBeat(groupId string) *service.HeartBeatResp {
+	if groupId == "" {
+		logrus.Errorf("groupId is empty.")
+		return &service.HeartBeatResp{
+			ErrorCode: service.INVALID_GROUP_ID,
+		}
+	}
+	gci.mutex.RLock()
+	group, exist := gci.groupManager[groupId]
+	gci.mutex.RUnlock()
+	if !exist {
+		logrus.Errorf("get group failed. cause group not exist, groupId: %s", groupId)
+		return &service.HeartBeatResp{
+			ErrorCode: service.INVALID_GROUP_ID,
+		}
+	}
+	if group.groupStatus == PreparingRebalance {
+		logrus.Infof("preparing rebalance. groupId: %s", groupId)
+		return &service.HeartBeatResp{
+			ErrorCode: service.REBALANCE_IN_PROGRESS,
+		}
+	}
+	return &service.HeartBeatResp{ErrorCode: service.NONE}
+}

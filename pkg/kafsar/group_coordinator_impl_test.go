@@ -138,3 +138,32 @@ func TestLeaveGroup(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, service.NONE, leaveGroupResp.ErrorCode)
 }
+
+func TestHeartBeatRebalanceInProgress(t *testing.T) {
+	groupCoordinator := NewGroupCoordinator(PulsarConfig{}, kafsarConfig, nil)
+	groupCoordinator.groupManager[groupId] = &Group{
+		groupId:     groupId,
+		groupStatus: PreparingRebalance,
+	}
+
+	resp := groupCoordinator.HandleHeartBeat(groupId)
+	assert.Equal(t, resp.ErrorCode, service.REBALANCE_IN_PROGRESS)
+}
+
+func TestHeartBeatInvalidGroupId(t *testing.T) {
+	groupCoordinator := NewGroupCoordinator(PulsarConfig{}, kafsarConfig, nil)
+	resp := groupCoordinator.HandleHeartBeat("")
+	assert.Equal(t, resp.ErrorCode, service.INVALID_GROUP_ID)
+	resp = groupCoordinator.HandleHeartBeat("no_group_id")
+	assert.Equal(t, resp.ErrorCode, service.INVALID_GROUP_ID)
+}
+
+func TestHeartBeatNone(t *testing.T) {
+	groupCoordinator := NewGroupCoordinator(PulsarConfig{}, kafsarConfig, nil)
+	groupCoordinator.groupManager[groupId] = &Group{
+		groupId:     groupId,
+		groupStatus: Empty,
+	}
+	resp := groupCoordinator.HandleHeartBeat(groupId)
+	assert.Equal(t, resp.ErrorCode, service.NONE)
+}
