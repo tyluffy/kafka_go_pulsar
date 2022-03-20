@@ -22,7 +22,7 @@ type OffsetManager interface {
 
 	AcquireOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool)
 
-	RemoveOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool)
+	RemoveOffset(username, kafkaTopic, groupId string, partition int) bool
 
 	Close()
 }

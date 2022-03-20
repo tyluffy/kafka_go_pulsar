@@ -18,7 +18,6 @@
 package kafsar
 
 import (
-	"fmt"
 	"github.com/paashzj/kafka_go/pkg/kafka"
 	"github.com/sirupsen/logrus"
 )
@@ -71,8 +70,4 @@ func Run(config *Config, impl Server) (*Broker, error) {
 	}
 	broker := &Broker{impl: k}
 	return broker, nil
-}
-
-func getOffsetTopic(config KafsarConfig) string {
-	return fmt.Sprintf("persistent://%s/%s/%s", config.PulsarTenant, config.PulsarNamespace, config.OffsetTopic)
 }

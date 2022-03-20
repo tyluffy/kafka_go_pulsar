@@ -73,7 +73,7 @@ func TestOffsetManager(t *testing.T) {
 		t.Fatal("acquire offset not exists")
 	}
 	assert.Equal(t, acquireOffset.Offset, offset)
-	_, flag = manager.RemoveOffset(username, topic, groupId, partition)
+	flag = manager.RemoveOffset(username, topic, groupId, partition)
 	if !flag {
 		t.Fatal("remove offset not exist")
 	}

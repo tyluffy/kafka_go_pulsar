@@ -187,7 +187,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	offsetCommitPartitionReq := service.OffsetCommitPartitionReq{
 		ClientId:           clientId,
 		PartitionId:        partition,
-		OffsetCommitOffset: int64(offset),
+		OffsetCommitOffset: offset,
 	}
 	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
 	assert.Nil(t, err)

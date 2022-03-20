@@ -20,6 +20,7 @@ package kafsar
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/google/uuid"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
@@ -37,11 +38,11 @@ type OffsetManagerImpl struct {
 }
 
 func NewOffsetManager(client pulsar.Client, config KafsarConfig) (OffsetManager, error) {
-	consumer, err := GetOffsetConsumer(client, config)
+	consumer, err := getOffsetConsumer(client, config)
 	if err != nil {
 		return nil, err
 	}
-	producer, err := GetOffsetProducer(client, config)
+	producer, err := getOffsetProducer(client, config)
 	if err != nil {
 		consumer.Close()
 		return nil, err
@@ -121,7 +122,7 @@ func (o *OffsetManagerImpl) AcquireOffset(username, kafkaTopic, groupId string, 
 	return pair, exist
 }
 
-func (o *OffsetManagerImpl) RemoveOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool) {
+func (o *OffsetManagerImpl) RemoveOffset(username, kafkaTopic, groupId string, partition int) bool {
 	key := o.generateKey(username, kafkaTopic, groupId, partition)
 	logrus.Infof("begin remove offset key: %s", key)
 	message := pulsar.ProducerMessage{}
@@ -129,10 +130,10 @@ func (o *OffsetManagerImpl) RemoveOffset(username, kafkaTopic, groupId string, p
 	_, err := o.producer.Send(context.TODO(), &message)
 	if err != nil {
 		logrus.Errorf("send msg failed. kafkaTopic: %s, err: %s", kafkaTopic, err)
-		return MessageIdPair{}, false
+		return false
 	}
 	logrus.Infof("kafkaTopic: %s remove offset success", kafkaTopic)
-	return MessageIdPair{}, true
+	return true
 }
 
 func (o *OffsetManagerImpl) Close() {
@@ -144,7 +145,7 @@ func (o *OffsetManagerImpl) generateKey(username, kafkaTopic, groupId string, pa
 	return username + kafkaTopic + groupId + strconv.Itoa(partition)
 }
 
-func GetOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consumer, error) {
+func getOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consumer, error) {
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
@@ -162,7 +163,7 @@ func GetOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consum
 	return consumer, nil
 }
 
-func GetOffsetProducer(client pulsar.Client, config KafsarConfig) (pulsar.Producer, error) {
+func getOffsetProducer(client pulsar.Client, config KafsarConfig) (pulsar.Producer, error) {
 	options := pulsar.ProducerOptions{}
 	options.Topic = getOffsetTopic(config)
 	options.SendTimeout = constant.DefaultProducerSendTimeout
@@ -174,4 +175,8 @@ func GetOffsetProducer(client pulsar.Client, config KafsarConfig) (pulsar.Produc
 		return nil, err
 	}
 	return producer, nil
+}
+
+func getOffsetTopic(config KafsarConfig) string {
+	return fmt.Sprintf("persistent://%s/%s/%s", config.PulsarTenant, config.PulsarNamespace, config.OffsetTopic)
 }
