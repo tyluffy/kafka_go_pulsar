@@ -24,11 +24,11 @@ import (
 )
 
 var (
-	clientId         = "consumer-a1e12365-ddfa-43fc-826e-9661fb54c274-1"
+	clientId         = "reader-a1e12365-ddfa-43fc-826e-9661fb54c274-1"
 	groupId          = "test-group-id"
 	memberId         = "test-member-id"
 	sessionTimeoutMs = 30000
-	protocolType     = "consumer"
+	protocolType     = "reader"
 	protocol         = service.GroupProtocol{
 		ProtocolName:     "range",
 		ProtocolMetadata: "000100000001000474657374ffffffff00000000",

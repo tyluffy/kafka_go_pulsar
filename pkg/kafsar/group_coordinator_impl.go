@@ -51,7 +51,7 @@ type Group struct {
 	groupProtocols   []*service.GroupProtocol
 	protocolType     string
 	members          map[string]memberMetadata
-	consumerMetadata *ConsumerMetadata
+	consumerMetadata *ReaderMetadata
 }
 
 type memberMetadata struct {
@@ -60,10 +60,10 @@ type memberMetadata struct {
 	metadata []byte
 }
 
-type ConsumerMetadata struct {
+type ReaderMetadata struct {
 	groupId    string
-	channel    chan pulsar.ConsumerMessage
-	consumer   pulsar.Consumer
+	channel    chan pulsar.ReaderMessage
+	reader     pulsar.Reader
 	messageIds *list.List
 }
 
@@ -135,8 +135,8 @@ func (gci *GroupCoordinatorImpl) HandleJoinGroup(groupId, memberId, clientId, pr
 			ErrorCode: service.UNKNOWN_MEMBER_ID,
 		}, nil
 	}
-	// TODO multi-consumer joinGroup PreparingRebalance
-	// TODO multi-consumer joinGroup CompletingRebalance
+	// TODO multi-reader joinGroup PreparingRebalance
+	// TODO multi-reader joinGroup CompletingRebalance
 
 	if group.groupStatus == Empty || group.groupStatus == Stable {
 		protocol := group.groupProtocols[0]
@@ -239,11 +239,14 @@ func (gci *GroupCoordinatorImpl) HandleLeaveGroup(groupId string,
 	membersMetadata := group.members
 	for i := range members {
 		delete(membersMetadata, members[i].MemberId)
-		logrus.Infof("consumer member: %s success leave group: %s", members[i].MemberId, groupId)
+		logrus.Infof("reader member: %s success leave group: %s", members[i].MemberId, groupId)
+	}
+	if len(group.members) == 0 {
+		group.groupStatus = Empty
 	}
 	consumerMetadata := group.consumerMetadata
 	if consumerMetadata != nil {
-		consumerMetadata.consumer.Close()
+		consumerMetadata.reader.Close()
 	}
 	group.consumerMetadata = nil
 	return &service.LeaveGroupResp{ErrorCode: service.NONE, Members: members}, nil
