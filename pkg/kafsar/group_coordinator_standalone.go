@@ -101,13 +101,20 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		if memberId == EmptyMemberId {
 			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
+				logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
 					ErrorCode: service.REBALANCE_IN_PROGRESS,
 				}, nil
 			}
 		} else {
-			gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			if err != nil {
+				return &service.JoinGroupResp{
+					MemberId:  memberId,
+					ErrorCode: service.REBALANCE_IN_PROGRESS,
+				}, nil
+			}
 		}
 		var members []*service.Member
 		if isMemberLeader(group, memberId) {
@@ -130,6 +137,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		if memberId == EmptyMemberId {
 			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
+				logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
 					ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -138,7 +146,14 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		} else {
 			if !matchProtocols(group.groupProtocols, protocols) {
 				// member is joining with the different metadata
-				gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+				if err != nil {
+					logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+					return &service.JoinGroupResp{
+						MemberId:  memberId,
+						ErrorCode: service.REBALANCE_IN_PROGRESS,
+					}, nil
+				}
 			}
 		}
 		var members []*service.Member
@@ -162,6 +177,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		if memberId == EmptyMemberId {
 			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
+				logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
 					ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -169,7 +185,14 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 			}
 		} else {
 			if isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
-				gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+				if err != nil {
+					logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+					return &service.JoinGroupResp{
+						MemberId:  memberId,
+						ErrorCode: service.REBALANCE_IN_PROGRESS,
+					}, nil
+				}
 			}
 		}
 		var members []*service.Member
@@ -339,11 +362,9 @@ func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clien
 	return memberId, gcs.doRebalance(group, rebalanceDelayMs)
 }
 
-func (gcs *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clientId, memberId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) {
+func (gcs *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clientId, memberId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) error {
 	gcs.prepareRebalance(group)
-	// todo process err
-	//nolint
-	gcs.doRebalance(group, rebalanceDelayMs)
+	return gcs.doRebalance(group, rebalanceDelayMs)
 }
 
 func (gcs *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.HeartBeatResp {
