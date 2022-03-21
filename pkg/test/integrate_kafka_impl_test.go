@@ -57,6 +57,7 @@ var (
 			GroupMinSessionTimeoutMs: 0,
 			GroupMaxSessionTimeoutMs: 30000,
 			MinFetchWaitMs:           10,
+			FetchIdleWaitMs:          10,
 			MaxFetchWaitMs:           maxFetchWaitMs,
 			MaxFetchRecord:           maxFetchRecord,
 			ContinuousOffset:         false,
@@ -118,7 +119,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 		FetchOffset: offset.Offset,
 		ClientId:    testClientId,
 	}
-	k.FetchPartition(&addr, topic, &fetchPartitionReq, 200, time.Now())
+	k.FetchPartition(&addr, topic, &fetchPartitionReq, 200, 10, time.Now())
 
 	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition) + "/subscriptions"
 	request, err := HttpGetRequest(url)
@@ -180,7 +181,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 		ClientId:    testClientId,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -255,7 +256,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 		ClientId:    testClientId,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -304,13 +305,13 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
 
-	fetchPartitionResp = k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
+	fetchPartitionResp = k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset = int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
 	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 
-	fetchPartitionResp = k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
+	fetchPartitionResp = k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 0, len(fetchPartitionResp.RecordBatch.Records))
 
@@ -410,7 +411,7 @@ func TestEarliestMsg(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 		ClientId:    testClientId,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -501,7 +502,7 @@ func TestLatestMsg(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 		ClientId:    testClientId,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, time.Now())
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset

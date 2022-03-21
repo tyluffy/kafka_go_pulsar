@@ -42,6 +42,7 @@ type KafsarConfig struct {
 	MaxFetchRecord           int
 	MinFetchWaitMs           int
 	MaxFetchWaitMs           int
+	FetchIdleWaitMs          int
 	ContinuousOffset         bool
 	// PulsarTenant use for kafsar internal
 	PulsarTenant string

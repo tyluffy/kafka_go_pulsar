@@ -64,6 +64,7 @@ func main() {
 	config.KafsarConfig.OffsetTopic = "kafka_offset"
 	config.KafsarConfig.GroupCoordinatorType = kafsar.Standalone
 	config.KafsarConfig.InitialDelayedJoinMs = 3000
+	config.KafsarConfig.FetchIdleWaitMs = 10
 	config.KafsarConfig.RebalanceTickMs = 100
 	e := &ExampleKafsarImpl{}
 	_, err := kafsar.Run(config, e)

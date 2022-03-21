@@ -97,7 +97,7 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 		f.Topic = topicReq.Topic
 		f.FetchPartitionRespList = make([]*service.FetchPartitionResp, len(topicReq.FetchPartitionReqList))
 		for j, partitionReq := range topicReq.FetchPartitionReqList {
-			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, maxWaitTime, fetchStart)
+			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, maxWaitTime, k.kafsarConfig.FetchIdleWaitMs, fetchStart)
 		}
 		result[i] = f
 	}
@@ -105,7 +105,7 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 }
 
 // FetchPartition visible for testing
-func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
+func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxWaitMs int, fetchIdleWaitMs int, start time.Time) *service.FetchPartitionResp {
 	user, exist := k.userInfoManager[addr.String()]
 	var records []*service.Record
 	recordBatch := service.RecordBatch{Records: records}
@@ -149,6 +149,7 @@ OUT:
 			break OUT
 		}
 		if !readerMetadata.reader.HasNext() {
+			time.Sleep(time.Duration(fetchIdleWaitMs) * time.Millisecond)
 			continue
 		}
 		message, err := readerMetadata.reader.Next(ctx)
