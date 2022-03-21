@@ -101,7 +101,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		if memberId == EmptyMemberId {
 			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
-				logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
 					ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -137,7 +137,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		if memberId == EmptyMemberId {
 			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
-				logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
 					ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -148,7 +148,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				// member is joining with the different metadata
 				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 				if err != nil {
-					logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 					return &service.JoinGroupResp{
 						MemberId:  memberId,
 						ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -177,7 +177,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		if memberId == EmptyMemberId {
 			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
-				logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
 					ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -187,7 +187,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 			if isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
 				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 				if err != nil {
-					logrus.Errorf("member %s join group %s failed, cause: %s",memberId, groupId, err)
+					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 					return &service.JoinGroupResp{
 						MemberId:  memberId,
 						ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -380,10 +380,10 @@ func (gcs *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.
 	if !exist {
 		logrus.Errorf("get group failed. cause group not exist, groupId: %s", groupId)
 		return &service.HeartBeatResp{
-			ErrorCode: service.INVALID_GROUP_ID,
+			ErrorCode: service.REBALANCE_IN_PROGRESS,
 		}
 	}
-	if gcs.getGroupStatus(group) == PreparingRebalance {
+	if gcs.getGroupStatus(group) == PreparingRebalance || gcs.getGroupStatus(group) == Dead {
 		logrus.Infof("preparing rebalance. groupId: %s", groupId)
 		return &service.HeartBeatResp{
 			ErrorCode: service.REBALANCE_IN_PROGRESS,

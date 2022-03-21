@@ -232,7 +232,7 @@ func TestHeartBeatInvalidGroupId(t *testing.T) {
 	resp := groupCoordinator.HandleHeartBeat("")
 	assert.Equal(t, resp.ErrorCode, service.INVALID_GROUP_ID)
 	resp = groupCoordinator.HandleHeartBeat("no_group_id")
-	assert.Equal(t, resp.ErrorCode, service.INVALID_GROUP_ID)
+	assert.Equal(t, resp.ErrorCode, service.REBALANCE_IN_PROGRESS)
 }
 
 func TestHeartBeatNone(t *testing.T) {

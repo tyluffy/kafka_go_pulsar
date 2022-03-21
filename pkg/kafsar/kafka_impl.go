@@ -107,11 +107,14 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 // FetchPartition visible for testing
 func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
 	user, exist := k.userInfoManager[addr.String()]
+	var records []*service.Record
+	recordBatch := service.RecordBatch{Records: records}
 	if !exist {
 		logrus.Errorf("fetch partition failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			RecordBatch: &recordBatch,
 		}
 	}
 	logrus.Infof("%s fetch topic: %s partition %d", addr.String(), kafkaTopic, req.PartitionId)
@@ -121,6 +124,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			RecordBatch: &recordBatch,
 		}
 	}
 	k.mutex.RLock()
@@ -131,10 +135,10 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
 			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			RecordBatch: &recordBatch,
 		}
 	}
-	var records []*service.Record
-	recordBatch := service.RecordBatch{Records: records}
+
 	var baseOffset int64
 	fistMessage := true
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxWaitMs)*time.Millisecond)
@@ -493,6 +497,10 @@ func (k *KafkaImpl) createReader(topic string, partition int, subscriptionName s
 
 func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.HeartBeatResp {
 	return k.groupCoordinator.HandleHeartBeat(req.GroupId)
+}
+
+func (k *KafkaImpl) PartitionNum(kafkaTopic string) (int, error) {
+	return 1, nil
 }
 
 func (k *KafkaImpl) getPulsarHttpUrl() string {
