@@ -36,7 +36,7 @@ func PartitionedTopic(topic string, partition int) string {
 	return topic + fmt.Sprintf(constant.PartitionSuffixFormat, partition)
 }
 
-func ReadEarliestMsg(partitionedTopic string, maxWaitMs int, pulsarClient pulsar.Client) pulsar.Message {
+func ReadEarliestMsg(partitionedTopic string, maxWaitMs int, pulsarClient pulsar.Client) (pulsar.Message, error) {
 	readerOptions := pulsar.ReaderOptions{
 		Topic:          partitionedTopic,
 		Name:           constant.OffsetReaderEarliestName,
@@ -62,22 +62,17 @@ func GetLatestMsgId(partitionedTopic, addr string) (msg []byte, err error) {
 	return msg, nil
 }
 
-func ReadLastedMsg(partitionedTopic string, maxWaitMs int, msgIdBytes []byte, pulsarClient pulsar.Client) pulsar.Message {
+func ReadLastedMsg(partitionedTopic string, maxWaitMs int, msgIdBytes []byte, pulsarClient pulsar.Client) (pulsar.Message, error) {
 	var msgId pulsar.MessageID
 	bytes, err := generateMsgBytes(msgIdBytes)
 	if err != nil {
 		logrus.Errorf("genrate msg bytes failed. topic: %s, err: %s", partitionedTopic, err)
-		readerOptions := pulsar.ReaderOptions{
-			Topic:          partitionedTopic,
-			Name:           constant.OffsetReaderEarliestName,
-			StartMessageID: pulsar.EarliestMessageID(),
-		}
-		return readNextMsg(readerOptions, maxWaitMs, pulsarClient)
+		return nil, err
 	}
 	msgId, err = pulsar.DeserializeMessageID(bytes)
 	if err != nil {
 		logrus.Errorf("deserialize messageId failed. msgBytes: %s, topic: %s, err: %s", string(msgIdBytes), partitionedTopic, err)
-		msgId = pulsar.EarliestMessageID()
+		return nil, err
 	}
 	readerOptions := pulsar.ReaderOptions{
 		Topic:                   partitionedTopic,
@@ -103,11 +98,11 @@ func getTenantNamespaceTopicFromPartitionedTopic(partitionedTopic string) (tenan
 	return "", "", "", errors.New("get tenant and namespace failed")
 }
 
-func readNextMsg(operation pulsar.ReaderOptions, maxWaitMs int, pulsarClient pulsar.Client) pulsar.Message {
+func readNextMsg(operation pulsar.ReaderOptions, maxWaitMs int, pulsarClient pulsar.Client) (pulsar.Message, error) {
 	reader, err := pulsarClient.CreateReader(operation)
 	if err != nil {
 		logrus.Warnf("create pulsar lasted read failed. topic: %s, err: %s", operation.Topic, err)
-		return nil
+		return nil, err
 	}
 	defer reader.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxWaitMs)*time.Millisecond)
@@ -115,9 +110,9 @@ func readNextMsg(operation pulsar.ReaderOptions, maxWaitMs int, pulsarClient pul
 	message, err := reader.Next(ctx)
 	if err != nil {
 		logrus.Errorf("get message failed. topic: %s", operation.Topic)
-		return nil
+		return nil, err
 	}
-	return message
+	return message, nil
 }
 
 func generateMsgBytes(msgBytes []byte) ([]byte, error) {

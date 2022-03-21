@@ -38,9 +38,9 @@ func TestReadEarliestMsg(t *testing.T) {
 	logrus.Infof("send msg to pulsar %s", messageId)
 	assert.Nil(t, err)
 	readTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
-	msg := utils.ReadEarliestMsg(readTopic, maxFetchWaitMs, pulsarClient)
-	if msg == nil {
-		t.Fatal("msg is nil")
+	msg, err := utils.ReadEarliestMsg(readTopic, maxFetchWaitMs, pulsarClient)
+	if err != nil {
+		t.Fatal(err)
 	}
 	assert.Equal(t, msg.ID().LedgerID(), messageId.LedgerID())
 	assert.Equal(t, msg.ID().EntryID(), messageId.EntryID())
@@ -71,10 +71,14 @@ func TestReadLatestMsg(t *testing.T) {
 	assert.Nil(t, err)
 	readPartitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	msg, err := utils.GetLatestMsgId(readPartitionedTopic, pulsarHttpUrl)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("msgId : %s", string(msg))
-	assert.Nil(t, err)
-	assert.NotNil(t, msg)
-	lastedMsg := utils.ReadLastedMsg(readPartitionedTopic, maxFetchWaitMs, msg, pulsarClient)
+	lastedMsg, err := utils.ReadLastedMsg(readPartitionedTopic, maxFetchWaitMs, msg, pulsarClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.NotNil(t, lastedMsg)
 	assert.Equal(t, lastedMsg.ID().LedgerID(), messageId.LedgerID())
 	assert.Equal(t, lastedMsg.ID().EntryID(), messageId.EntryID())

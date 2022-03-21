@@ -265,12 +265,16 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 		if err != nil {
 			logrus.Errorf("get topic %s latest offset failed %s\n", kafkaTopic, err)
 			return &service.ListOffsetsPartitionResp{
-				PartitionId: req.PartitionId,
-				Offset:      offset,
-				Time:        constant.TimeEarliest,
+				ErrorCode: service.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
-		lastedMsg := utils.ReadLastedMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, msg, k.pulsarClient)
+		lastedMsg, err := utils.ReadLastedMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, msg, k.pulsarClient)
+		if err != nil {
+			logrus.Errorf("read lasted msg failed. topic: %s, err: %s", kafkaTopic, err)
+			return &service.ListOffsetsPartitionResp{
+				ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			}, nil
+		}
 		if lastedMsg != nil {
 			err := readerMessages.reader.Seek(lastedMsg.ID())
 			if err != nil {
@@ -283,7 +287,13 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 		}
 	}
 	if req.Time == constant.TimeEarliest {
-		message := utils.ReadEarliestMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, k.pulsarClient)
+		message, err := utils.ReadEarliestMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, k.pulsarClient)
+		if err != nil {
+			logrus.Errorf("read earliest msg failed. topic: %s, err: %s", kafkaTopic, err)
+			return &service.ListOffsetsPartitionResp{
+				ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			}, nil
+		}
 		if message != nil {
 			err := readerMessages.reader.Seek(message.ID())
 			if err != nil {
