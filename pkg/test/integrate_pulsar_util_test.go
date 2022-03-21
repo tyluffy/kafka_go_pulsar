@@ -32,11 +32,15 @@ func TestReadEarliestMsg(t *testing.T) {
 	partitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	setupPulsar()
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: partitionedTopic})
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	readTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	msg, err := utils.ReadEarliestMsg(readTopic, maxFetchWaitMs, pulsarClient)
 	if err != nil {
@@ -52,23 +56,33 @@ func TestReadLatestMsg(t *testing.T) {
 	partitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	setupPulsar()
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: partitionedTopic})
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message = pulsar.ProducerMessage{Value: testContent}
 	messageId, err = producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
 	message = pulsar.ProducerMessage{Value: testContent}
 	messageId, err = producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
 	message = pulsar.ProducerMessage{Value: testContent}
 	messageId, err = producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
 	readPartitionedTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
 	msg, err := utils.GetLatestMsgId(readPartitionedTopic, pulsarHttpUrl)
 	if err != nil {

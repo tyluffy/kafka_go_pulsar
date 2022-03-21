@@ -80,7 +80,9 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	pulsarTopic := topicPrefix + topic
 	setupPulsar()
 	k, err := kafsar.NewKafsar(kafsarServer, config)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer k.Close()
 
 	// sasl auth
@@ -103,7 +105,9 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 		MemberId:       "",
 	}
 	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	// offset fetch
@@ -113,7 +117,9 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 		PartitionId: partition,
 	}
 	offset, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offset.Offset,
@@ -123,7 +129,9 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 
 	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition) + "/subscriptions"
 	request, err := HttpGetRequest(url)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Contains(t, string(request), "reader")
 }
 
@@ -137,11 +145,15 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		t.Fatal(err)
 	}
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
 
 	// sasl auth
 	saslReq := service.SaslReq{
@@ -162,7 +174,9 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		GroupProtocols: protocols,
 	}
 	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	// offset fetch
@@ -172,7 +186,9 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
 
 	// fetch partition
@@ -193,7 +209,9 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		OffsetCommitOffset: offset,
 	}
 	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
 	// acquire offset
 	time.Sleep(5 * time.Second)
@@ -212,11 +230,15 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
 
 	// sasl auth
 	saslReq := service.SaslReq{
@@ -237,7 +259,9 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		GroupProtocols: protocols,
 	}
 	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	// offset fetch
@@ -247,7 +271,9 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
 
 	// fetch partition
@@ -269,7 +295,9 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		OffsetCommitOffset: offset,
 	}
 	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
 	time.Sleep(5 * time.Second)
 	// leave group
@@ -282,17 +310,23 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		Members:  member,
 	}
 	leave, err := k.GroupLeave(&addr, &req)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, leave.ErrorCode, service.NONE)
 
 	// send message again
 	message = pulsar.ProducerMessage{Value: testContent}
 	messageId, err = producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	assert.Nil(t, err)
 
 	joinGroupResp, err = k.GroupJoin(&addr, &joinGroupReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	// offset fetch
@@ -302,7 +336,9 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err = k.OffsetFetch(&addr, topic, &offsetFetchReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
 
 	fetchPartitionResp = k.FetchPartition(&addr, topic, &fetchPartitionReq, 2000, 10, time.Now())
@@ -322,7 +358,9 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		OffsetCommitOffset: offset,
 	}
 	commitPartitionResp, err = k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
 	// acquire offset
 	time.Sleep(5 * time.Second)
@@ -349,7 +387,6 @@ func TestEarliestMsg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Nil(t, err)
 
 	message = pulsar.ProducerMessage{Value: testContent}
 	latestMessageId, err := producer.Send(context.TODO(), &message)
@@ -444,16 +481,22 @@ func TestLatestMsg(t *testing.T) {
 		t.Fatal(err)
 	}
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message := pulsar.ProducerMessage{Value: testContent}
-	earlistMessageId, err := producer.Send(context.TODO(), &message)
-	logrus.Infof("send msg to pulsar %s", earlistMessageId)
-	assert.Nil(t, err)
+	earliestMessageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logrus.Infof("send msg to pulsar %s", earliestMessageId)
 
 	message = pulsar.ProducerMessage{Value: testContent}
 	latestMessageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", latestMessageId)
-	assert.Nil(t, err)
 	// sasl auth
 	saslReq := service.SaslReq{
 		Username: username,
@@ -473,7 +516,9 @@ func TestLatestMsg(t *testing.T) {
 		GroupProtocols: protocols,
 	}
 	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	// offset fetch
@@ -483,7 +528,9 @@ func TestLatestMsg(t *testing.T) {
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
 
 	// offset fetch
@@ -493,7 +540,9 @@ func TestLatestMsg(t *testing.T) {
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, listPartition.ErrorCode)
 
 	// fetch partition
@@ -514,7 +563,9 @@ func TestLatestMsg(t *testing.T) {
 		OffsetCommitOffset: offset,
 	}
 	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
 	// acquire offset
 	time.Sleep(5 * time.Second)

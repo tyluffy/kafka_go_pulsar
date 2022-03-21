@@ -53,10 +53,10 @@ func TestOffsetManager(t *testing.T) {
 	}
 	message := pulsar.ProducerMessage{Value: testContent}
 	messageId, err := producer.Send(context.TODO(), &message)
-	logrus.Infof("send msg to pulsar %s", messageId)
 	if err != nil {
 		t.Fatal(err)
 	}
+	logrus.Infof("send msg to pulsar %s", messageId)
 	rand.Seed(time.Now().Unix())
 	offset := rand.Int63()
 	messagePair := kafsar.MessageIdPair{
