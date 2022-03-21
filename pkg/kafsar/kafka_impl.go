@@ -418,7 +418,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 }
 
 func (k *KafkaImpl) consumePartitionedTopic(user *userInfo, kafkaTopic string, partitionId int) (string, error) {
-	pulsarTopic, err := k.server.KafkaConsumeTopic(user.username, kafkaTopic)
+	pulsarTopic, err := k.server.PulsarTopic(user.username, kafkaTopic)
 	if err != nil {
 		return "", nil
 	}

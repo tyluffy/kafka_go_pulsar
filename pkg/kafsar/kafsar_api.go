@@ -26,7 +26,6 @@ type Server interface {
 
 	SubscriptionName(groupId string) (string, error)
 
-	KafkaConsumeTopic(username, topic string) (string, error)
-
-	KafkaProduceTopic(username, topic string) (string, error)
+	// PulsarTopic the corresponding topic in pulsar
+	PulsarTopic(username, topic string) (string, error)
 }

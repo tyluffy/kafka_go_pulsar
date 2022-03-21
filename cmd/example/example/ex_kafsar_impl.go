@@ -36,10 +36,6 @@ func (e ExampleKafsarImpl) SubscriptionName(groupId string) (string, error) {
 	return groupId, nil
 }
 
-func (e ExampleKafsarImpl) KafkaConsumeTopic(username, topic string) (string, error) {
-	return "persistent://public/default/" + topic, nil
-}
-
-func (e ExampleKafsarImpl) KafkaProduceTopic(username, topic string) (string, error) {
+func (e ExampleKafsarImpl) PulsarTopic(username, topic string) (string, error) {
 	return "persistent://public/default/" + topic, nil
 }

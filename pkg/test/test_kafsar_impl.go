@@ -42,10 +42,6 @@ func (k KafsarImpl) SubscriptionName(groupId string) (string, error) {
 	return subscriptionPrefix + groupId, nil
 }
 
-func (k KafsarImpl) KafkaConsumeTopic(username, topic string) (string, error) {
+func (k KafsarImpl) PulsarTopic(username, topic string) (string, error) {
 	return defaultTopicType + topicPrefix + topic, nil
-}
-
-func (k KafsarImpl) KafkaProduceTopic(username, topic string) (string, error) {
-	return topicPrefix + topic, nil
 }
