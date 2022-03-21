@@ -25,6 +25,7 @@ import (
 	"github.com/paashzj/kafka_go/pkg/service"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -35,7 +36,7 @@ type KafkaImpl struct {
 	server           Server
 	pulsarConfig     PulsarConfig
 	pulsarClient     pulsar.Client
-	groupCoordinator *GroupCoordinatorImpl
+	groupCoordinator GroupCoordinator
 	kafsarConfig     KafsarConfig
 	readerManager    map[string]*ReaderMetadata
 	mutex            sync.RWMutex
@@ -65,7 +66,13 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	if err != nil {
 		kafka.pulsarClient.Close()
 	}
-	kafka.groupCoordinator = NewGroupCoordinator(kafka.pulsarConfig, kafka.kafsarConfig, kafka.pulsarClient)
+	if kafka.kafsarConfig.GroupCoordinatorType == Cluster {
+		kafka.groupCoordinator = NewGroupCoordinatorCluster()
+	} else if kafka.kafsarConfig.GroupCoordinatorType == Standalone {
+		kafka.groupCoordinator = NewGroupCoordinatorStandalone(kafka.pulsarConfig, kafka.kafsarConfig, kafka.pulsarClient)
+	} else {
+		return nil, errors.Errorf("unexpect GroupCoordinatorType: %v", kafka.kafsarConfig.GroupCoordinatorType)
+	}
 	kafka.readerManager = make(map[string]*ReaderMetadata)
 	kafka.userInfoManager = make(map[string]*userInfo)
 	return &kafka, nil
@@ -199,13 +206,15 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	k.groupCoordinator.mutex.RLock()
-	group, exist := k.groupCoordinator.groupManager[req.GroupId]
-	k.groupCoordinator.mutex.RUnlock()
-	if exist {
-		k.readerManager[group.partitionedTopic].reader.Close()
-		delete(k.readerManager, group.partitionedTopic)
+	group, err := k.groupCoordinator.GetGroup(req.GroupId)
+	if err != nil {
+		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
+		return &service.LeaveGroupResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
 	}
+	k.readerManager[group.partitionedTopic].reader.Close()
+	delete(k.readerManager, group.partitionedTopic)
 	return leaveGroupResp, nil
 }
 
@@ -389,9 +398,13 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		consumerMetadata = &metadata
 		k.mutex.Unlock()
 	}
-	k.mutex.RLock()
-	group := k.groupCoordinator.groupManager[req.GroupId]
-	k.mutex.RUnlock()
+	group, err := k.groupCoordinator.GetGroup(req.GroupId)
+	if err != nil {
+		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
+		return &service.OffsetFetchPartitionResp{
+			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+		}, nil
+	}
 	group.partitionedTopic = partitionedTopic
 	group.consumerMetadata = consumerMetadata
 

@@ -99,6 +99,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 		SessionTimeout: sessionTimeoutMs,
 		ProtocolType:   protocolType,
 		GroupProtocols: protocols,
+		MemberId:       "",
 	}
 	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
 	assert.Nil(t, err)
@@ -329,7 +330,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	assert.Equal(t, acquireOffset.Offset, kafsar.ConvertMsgId(messageId))
 }
 
-func TestEarlistMsg(t *testing.T) {
+func TestEarliestMsg(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
@@ -339,16 +340,22 @@ func TestEarlistMsg(t *testing.T) {
 		t.Fatal(err)
 	}
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	message := pulsar.ProducerMessage{Value: testContent}
-	earlistMessageId, err := producer.Send(context.TODO(), &message)
-	logrus.Infof("send msg to pulsar %s", earlistMessageId)
+	earliestMessageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Nil(t, err)
 
 	message = pulsar.ProducerMessage{Value: testContent}
 	latestMessageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logrus.Infof("send msg to pulsar %s", latestMessageId)
-	assert.Nil(t, err)
 	// sasl auth
 	saslReq := service.SaslReq{
 		Username: username,
@@ -368,7 +375,9 @@ func TestEarlistMsg(t *testing.T) {
 		GroupProtocols: protocols,
 	}
 	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	// offset fetch
@@ -378,7 +387,9 @@ func TestEarlistMsg(t *testing.T) {
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
 
 	// offset fetch
@@ -388,7 +399,9 @@ func TestEarlistMsg(t *testing.T) {
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, listPartition.ErrorCode)
 
 	// fetch partition
@@ -409,13 +422,15 @@ func TestEarlistMsg(t *testing.T) {
 		OffsetCommitOffset: offset,
 	}
 	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
 	// acquire offset
 	time.Sleep(5 * time.Second)
 	acquireOffset, b := k.GetOffsetManager().AcquireOffset(username, topic, groupId, partition)
 	assert.True(t, b)
-	assert.Equal(t, acquireOffset.Offset, kafsar.ConvertMsgId(earlistMessageId))
+	assert.Equal(t, acquireOffset.Offset, kafsar.ConvertMsgId(earliestMessageId))
 }
 
 func TestLatestMsg(t *testing.T) {

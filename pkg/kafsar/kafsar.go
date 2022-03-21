@@ -49,6 +49,12 @@ type KafsarConfig struct {
 	PulsarNamespace string
 	// OffsetTopic use to store kafka offset
 	OffsetTopic string
+	// GroupCoordinatorType enum: Standalone, Cluster; default Standalone
+	GroupCoordinatorType GroupCoordinatorType
+	// InitialDelayedJoinMs
+	InitialDelayedJoinMs int
+	// RebalanceTickMs
+	RebalanceTickMs int
 }
 
 type Broker struct {

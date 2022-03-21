@@ -27,4 +27,8 @@ type GroupCoordinator interface {
 		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
 
 	HandleLeaveGroup(groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
+
+	HandleHeartBeat(groupId string) *service.HeartBeatResp
+
+	GetGroup(groupId string) (*Group, error)
 }
