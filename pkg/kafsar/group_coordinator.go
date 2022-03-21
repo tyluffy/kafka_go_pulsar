@@ -37,6 +37,7 @@ type Group struct {
 	generationId      int
 	groupLock         sync.RWMutex
 	groupStatusLock   sync.RWMutex
+	sessionTimeoutMs  int
 }
 
 type memberMetadata struct {

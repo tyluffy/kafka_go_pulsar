@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Timeout;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -190,6 +191,49 @@ public class KafkaConsumeMsgTest {
             log.info("record value is {} offset is {}", consumerRecord.value(), consumerRecord.offset());
             Assertions.assertEquals(msg + "4", consumerRecord.value());
             break;
+        }
+    }
+
+    @Test
+    @Timeout(60)
+    public void multiConsumerTest() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        PulsarClient pulsarClient = PulsarClient.builder()
+                .serviceUrl(PulsarConst.TCP_URL)
+                .build();
+        ProducerBuilder<String> producerBuilder = pulsarClient.newProducer(Schema.STRING).enableBatching(false);
+        Producer<String> producer = producerBuilder.topic(topic).create();
+        String msg = UUID.randomUUID().toString();
+        producer.send(msg);
+        producer.send(msg);
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_LATEST);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        Consumer<String, String> consumer2 = new KafkaConsumer<>(props);
+
+        new Thread(() -> consumer1.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer2.subscribe(Collections.singletonList(topic))).start();
+
+        TimeUnit.SECONDS.sleep(1);
+
+        while (true) {
+            ConsumerRecords<String, String> consumerRecords = consumer2.poll(Duration.ofSeconds(1));
+            if (consumerRecords.isEmpty()) {
+                TimeUnit.MILLISECONDS.sleep(200);
+            } else {
+                Assertions.assertEquals(msg, consumerRecords.iterator().next().value());
+                break;
+            }
         }
     }
 

@@ -57,11 +57,12 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 	group, exist := gcs.groupManager[groupId]
 	if !exist {
 		group = &Group{
-			groupId:      groupId,
-			groupStatus:  Empty,
-			protocolType: protocolType,
-			members:      make(map[string]*memberMetadata),
-			canRebalance: true,
+			groupId:          groupId,
+			groupStatus:      Empty,
+			protocolType:     protocolType,
+			members:          make(map[string]*memberMetadata),
+			canRebalance:     true,
+			sessionTimeoutMs: sessionTimeoutMs,
 		}
 		gcs.groupManager[groupId] = group
 	}
@@ -98,7 +99,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 
 	if gcs.getGroupStatus(group) == PreparingRebalance {
 		if memberId == EmptyMemberId {
-			memberId = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			if err != nil {
+				return &service.JoinGroupResp{
+					MemberId:  memberId,
+					ErrorCode: service.REBALANCE_IN_PROGRESS,
+				}, nil
+			}
 		} else {
 			gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 		}
@@ -121,7 +128,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 
 	if gcs.getGroupStatus(group) == CompletingRebalance {
 		if memberId == EmptyMemberId {
-			memberId = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			if err != nil {
+				return &service.JoinGroupResp{
+					MemberId:  memberId,
+					ErrorCode: service.REBALANCE_IN_PROGRESS,
+				}, nil
+			}
 		} else {
 			if !matchProtocols(group.groupProtocols, protocols) {
 				// member is joining with the different metadata
@@ -147,7 +160,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 
 	if gcs.getGroupStatus(group) == Empty || gcs.getGroupStatus(group) == Stable {
 		if memberId == EmptyMemberId {
-			memberId = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			if err != nil {
+				return &service.JoinGroupResp{
+					MemberId:  memberId,
+					ErrorCode: service.REBALANCE_IN_PROGRESS,
+				}, nil
+			}
 		} else {
 			if isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
 				gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
@@ -216,8 +235,8 @@ func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string,
 	if gcs.getGroupStatus(group) == CompletingRebalance {
 		// get assignment from leader member
 		if isMemberLeader(group, memberId) {
-			logrus.Infof("Assignment received from leader %s for group %s for generation %d", memberId, groupId, generation)
 			for i := range groupAssignments {
+				logrus.Infof("Assignment %#+v received from leader %s for group %s for generation %d", groupAssignments[i], memberId, groupId, generation)
 				group.members[groupAssignments[i].MemberId].assignment = []byte(groupAssignments[i].MemberAssignment)
 			}
 			gcs.setGroupStatus(group, Stable)
@@ -226,7 +245,14 @@ func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string,
 				MemberAssignment: string(group.members[memberId].assignment),
 			}, nil
 		}
-		gcs.awaitingRebalance(group, gcs.kafsarConfig.RebalanceTickMs, Stable)
+		err := gcs.awaitingRebalance(group, gcs.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, Stable)
+		if err != nil {
+			logrus.Errorf("member %s sync group %s failed, cause: %s", memberId, groupId, err)
+			return &service.SyncGroupResp{
+				ErrorCode:        service.REBALANCE_IN_PROGRESS,
+				MemberAssignment: string(group.members[memberId].assignment),
+			}, nil
+		}
 		return &service.SyncGroupResp{
 			ErrorCode:        service.NONE,
 			MemberAssignment: string(group.members[memberId].assignment),
@@ -290,7 +316,7 @@ func (gcs *GroupCoordinatorStandalone) GetGroup(groupId string) (*Group, error) 
 	return group, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) string {
+func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) (string, error) {
 	memberId := clientId + "-" + uuid.New().String()
 	protocolMap := make(map[string]string)
 	for i := range protocols {
@@ -310,12 +336,13 @@ func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clien
 	}
 	group.groupLock.Unlock()
 	gcs.prepareRebalance(group)
-	gcs.doRebalance(group, rebalanceDelayMs)
-	return memberId
+	return memberId, gcs.doRebalance(group, rebalanceDelayMs)
 }
 
 func (gcs *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clientId, memberId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) {
 	gcs.prepareRebalance(group)
+	// todo process err
+	//nolint
 	gcs.doRebalance(group, rebalanceDelayMs)
 }
 
@@ -348,7 +375,7 @@ func (gcs *GroupCoordinatorStandalone) prepareRebalance(group *Group) {
 	gcs.setGroupStatus(group, PreparingRebalance)
 }
 
-func (gcs *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayMs int) {
+func (gcs *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayMs int) error {
 	group.groupLock.Lock()
 	if group.canRebalance {
 		group.canRebalance = false
@@ -359,9 +386,10 @@ func (gcs *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayM
 		group.generationId++
 		logrus.Infof("completing rebalance group %s with new generation %d", group.groupId, group.generationId)
 		group.canRebalance = true
+		return nil
 	} else {
 		group.groupLock.Unlock()
-		gcs.awaitingRebalance(group, gcs.kafsarConfig.RebalanceTickMs, CompletingRebalance)
+		return gcs.awaitingRebalance(group, gcs.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, CompletingRebalance)
 	}
 }
 
@@ -370,10 +398,14 @@ func (gcs *GroupCoordinatorStandalone) vote(group *Group, protocols []*service.G
 	group.supportedProtocol = protocols[0].ProtocolName
 }
 
-func (gcs *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, waitForStatus GroupStatus) {
+func (gcs *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, sessionTimeout int, waitForStatus GroupStatus) error {
+	start := time.Now()
 	for {
 		if gcs.getGroupStatus(group) == waitForStatus {
-			break
+			return nil
+		}
+		if time.Since(start).Milliseconds() >= int64(sessionTimeout) {
+			return errors.Errorf("relalance timeout")
 		}
 		time.Sleep(time.Duration(rebalanceTickMs) * time.Millisecond)
 	}

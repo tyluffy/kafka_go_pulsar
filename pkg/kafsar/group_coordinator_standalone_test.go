@@ -21,6 +21,7 @@ import (
 	"github.com/paashzj/kafka_go/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 var (
@@ -90,6 +91,37 @@ func TestGroupRebalance(t *testing.T) {
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 }
 
+func TestNotifyReJoinGroup(t *testing.T) {
+	config := KafsarConfig{
+		MaxConsumersPerGroup:     10,
+		GroupMinSessionTimeoutMs: 0,
+		GroupMaxSessionTimeoutMs: 30000,
+		InitialDelayedJoinMs:     3000,
+		RebalanceTickMs:          100,
+	}
+	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, config, nil)
+	resp1, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	assert.Nil(t, err)
+	assert.Equal(t, service.NONE, resp1.ErrorCode)
+	group, err := groupCoordinator.GetGroup(groupId)
+	assert.Nil(t, err)
+	assert.Equal(t, CompletingRebalance, group.groupStatus)
+	memberId1 := resp1.MemberId
+	assert.Equal(t, resp1.LeaderId, memberId1)
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		heartBeatResp := groupCoordinator.HandleHeartBeat(groupId)
+		assert.Equal(t, service.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
+	}()
+	resp2, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	assert.Nil(t, err)
+	assert.Equal(t, service.NONE, resp2.ErrorCode)
+	assert.Nil(t, err)
+	assert.Equal(t, CompletingRebalance, group.groupStatus)
+	assert.Equal(t, memberId1, resp2.LeaderId)
+}
+
 func TestHandleJoinGroupMultiMember(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	resp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
@@ -140,6 +172,7 @@ func TestHandleSyncGroup(t *testing.T) {
 	syncGroupResp, err := groupCoordinator.HandleSyncGroup(groupId, memberId, generation, groupAssignments)
 	assert.Nil(t, err)
 	assert.Equal(t, service.NONE, syncGroupResp.ErrorCode)
+	assert.Equal(t, Stable, groupCoordinator.groupManager[groupId].groupStatus)
 }
 
 func TestHandleSyncGroupInvalidParams(t *testing.T) {
