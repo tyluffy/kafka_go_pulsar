@@ -109,7 +109,10 @@ func readNextMsg(operation pulsar.ReaderOptions, maxWaitMs int, pulsarClient pul
 	defer cancel()
 	message, err := reader.Next(ctx)
 	if err != nil {
-		logrus.Errorf("get message failed. topic: %s", operation.Topic)
+		logrus.Errorf("get message failed. topic: %s, err: %s", operation.Topic, err)
+		if strings.Contains(err.Error(), constant.ReadMsgTimeoutErr) {
+			return message, nil
+		}
 		return nil, err
 	}
 	return message, nil

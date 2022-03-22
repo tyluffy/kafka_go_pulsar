@@ -230,6 +230,61 @@ public class KafkaConsumeMsgTest extends BaseTest {
         }
     }
 
+
+    @Test
+    @Timeout(60)
+    public void ConsumeEarliestWithNoMsgTest() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_EARLIER);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        consumer1.subscribe(Collections.singletonList(topic));
+
+        TimeUnit.SECONDS.sleep(1);
+
+        for (int i = 0; i < 3; i++) {
+            ConsumerRecords<String, String> consumerRecords = consumer1.poll(Duration.ofSeconds(1));
+            Assertions.assertTrue(consumerRecords.isEmpty());
+        }
+    }
+
+    @Test
+    @Timeout(60)
+    public void ConsumeLatestWithNoMsgTest() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_LATEST);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        consumer1.subscribe(Collections.singletonList(topic));
+
+        TimeUnit.SECONDS.sleep(1);
+
+        for (int i = 0; i < 3; i++) {
+            ConsumerRecords<String, String> consumerRecords = consumer1.poll(Duration.ofSeconds(1));
+            Assertions.assertTrue(consumerRecords.isEmpty());
+        }
+    }
+
     @AfterAll
     public void afterAll() throws PulsarClientException {
         super.close();

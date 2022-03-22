@@ -573,3 +573,117 @@ func TestLatestMsg(t *testing.T) {
 	assert.True(t, b)
 	assert.Equal(t, acquireOffset.Offset, kafsar.ConvertMsgId(latestMessageId))
 }
+
+func TestLatestTypeWithNoMsg(t *testing.T) {
+	topic := uuid.New().String()
+	groupId := uuid.New().String()
+	setupPulsar()
+	k, err := kafsar.NewKafsar(kafsarServer, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
+
+	// join group
+	joinGroupReq := service.JoinGroupReq{
+		ClientId:       clientId,
+		GroupId:        groupId,
+		SessionTimeout: sessionTimeoutMs,
+		ProtocolType:   protocolType,
+		GroupProtocols: protocols,
+	}
+	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+
+	// offset fetch
+	offsetFetchReq := service.OffsetFetchPartitionReq{
+		GroupId:     groupId,
+		ClientId:    testClientId,
+		PartitionId: partition,
+	}
+	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
+
+	// offset fetch
+	listOffset := service.ListOffsetsPartitionReq{
+		Time:        constant.TimeLasted,
+		ClientId:    testClientId,
+		PartitionId: partition,
+	}
+	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, listPartition.ErrorCode)
+}
+
+func TestEarliestTypeWithNoMsg(t *testing.T) {
+	topic := uuid.New().String()
+	groupId := uuid.New().String()
+	setupPulsar()
+	k, err := kafsar.NewKafsar(kafsarServer, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
+
+	// join group
+	joinGroupReq := service.JoinGroupReq{
+		ClientId:       clientId,
+		GroupId:        groupId,
+		SessionTimeout: sessionTimeoutMs,
+		ProtocolType:   protocolType,
+		GroupProtocols: protocols,
+	}
+	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+
+	// offset fetch
+	offsetFetchReq := service.OffsetFetchPartitionReq{
+		GroupId:     groupId,
+		ClientId:    testClientId,
+		PartitionId: partition,
+	}
+	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
+
+	// offset fetch
+	listOffset := service.ListOffsetsPartitionReq{
+		Time:        constant.TimeEarliest,
+		ClientId:    testClientId,
+		PartitionId: partition,
+	}
+	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, listPartition.ErrorCode)
+}

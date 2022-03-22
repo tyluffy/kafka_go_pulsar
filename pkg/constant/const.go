@@ -37,3 +37,7 @@ const (
 const (
 	LastMsgIdUrl = "/admin/v2/persistent/%s/%s/%s/lastMessageId"
 )
+
+const (
+	ReadMsgTimeoutErr = "context deadline exceeded"
+)
