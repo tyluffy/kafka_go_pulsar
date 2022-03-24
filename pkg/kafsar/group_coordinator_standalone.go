@@ -367,7 +367,7 @@ func (gcs *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.
 			ErrorCode: service.REBALANCE_IN_PROGRESS,
 		}
 	}
-	if gcs.getGroupStatus(group) == PreparingRebalance || gcs.getGroupStatus(group) == Dead {
+	if gcs.getGroupStatus(group) == PreparingRebalance || gcs.getGroupStatus(group) == CompletingRebalance || gcs.getGroupStatus(group) == Dead {
 		logrus.Infof("preparing rebalance. groupId: %s", groupId)
 		return &service.HeartBeatResp{
 			ErrorCode: service.REBALANCE_IN_PROGRESS,
