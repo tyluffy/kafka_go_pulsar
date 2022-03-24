@@ -84,7 +84,7 @@ func (k *KafkaImpl) Produce(addr net.Addr, kafkaTopic string, partition int, req
 
 func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.FetchTopicResp, error) {
 	var maxWaitTime int
-	if req.MaxWaitTime > k.kafsarConfig.MaxFetchWaitMs {
+	if req.MaxWaitTime < k.kafsarConfig.MaxFetchWaitMs {
 		maxWaitTime = req.MaxWaitTime
 	} else {
 		maxWaitTime = k.kafsarConfig.MaxFetchWaitMs
@@ -97,7 +97,7 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 		f.Topic = topicReq.Topic
 		f.FetchPartitionRespList = make([]*service.FetchPartitionResp, len(topicReq.FetchPartitionReqList))
 		for j, partitionReq := range topicReq.FetchPartitionReqList {
-			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, maxWaitTime, k.kafsarConfig.FetchIdleWaitMs, fetchStart)
+			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, req.MaxBytes, req.MinBytes, maxWaitTime, fetchStart)
 		}
 		result[i] = f
 	}
@@ -105,7 +105,7 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 }
 
 // FetchPartition visible for testing
-func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxWaitMs int, fetchIdleWaitMs int, start time.Time) *service.FetchPartitionResp {
+func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
 	user, exist := k.userInfoManager[addr.String()]
 	var records []*service.Record
 	recordBatch := service.RecordBatch{Records: records}
@@ -138,7 +138,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 			RecordBatch: &recordBatch,
 		}
 	}
-
+	byteLength := 0
 	var baseOffset int64
 	fistMessage := true
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxWaitMs)*time.Millisecond)
@@ -148,15 +148,12 @@ OUT:
 		if time.Since(start).Milliseconds() >= int64(maxWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
 			break OUT
 		}
-		if !readerMetadata.reader.HasNext() {
-			time.Sleep(time.Duration(fetchIdleWaitMs) * time.Millisecond)
-			continue
-		}
 		message, err := readerMetadata.reader.Next(ctx)
 		if err != nil {
 			logrus.Errorf("read msg failed. err: %s", err)
 			continue
 		}
+		byteLength = byteLength + utils.CalculateMsgLength(message)
 		logrus.Infof("receive msg: %s from %s", message.ID(), message.Topic())
 		offset := convOffset(message, k.kafsarConfig.ContinuousOffset)
 		if fistMessage {
@@ -173,8 +170,11 @@ OUT:
 			MessageId: message.ID(),
 			Offset:    offset,
 		})
-		if time.Since(start).Milliseconds() < int64(k.kafsarConfig.MinFetchWaitMs) {
-			continue
+		if byteLength > minBytes && time.Since(start).Milliseconds() >= int64(k.kafsarConfig.MinFetchWaitMs) {
+			break
+		}
+		if byteLength > maxBytes {
+			break
 		}
 	}
 	recordBatch.Offset = baseOffset

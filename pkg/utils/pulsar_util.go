@@ -118,6 +118,18 @@ func readNextMsg(operation pulsar.ReaderOptions, maxWaitMs int, pulsarClient pul
 	return message, nil
 }
 
+func CalculateMsgLength(message pulsar.Message) int {
+	length := 0
+	length += len([]byte(message.Key()))
+	length += len(message.Payload())
+	properties := message.Properties()
+	for key, value := range properties {
+		length += len([]byte(key))
+		length += len([]byte(value))
+	}
+	return length
+}
+
 func generateMsgBytes(msgBytes []byte) ([]byte, error) {
 	var msgId model.MessageID
 	err := json.Unmarshal(msgBytes, &msgId)
