@@ -116,18 +116,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}, nil
 			}
 		}
-		var members []*service.Member
-		if isMemberLeader(group, memberId) {
-			for _, member := range group.members {
-				members = append(members, &service.Member{MemberId: member.memberId, GroupInstanceId: nil, Metadata: member.metadata})
-			}
-		}
+		members := gcs.getLeaderMembers(group, memberId)
 		return &service.JoinGroupResp{
 			ErrorCode:    service.NONE,
 			GenerationId: group.generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
-			LeaderId:     group.leader,
+			LeaderId:     gcs.getMemberLeader(group),
 			MemberId:     memberId,
 			Members:      members,
 		}, nil
@@ -156,18 +151,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}
 			}
 		}
-		var members []*service.Member
-		if isMemberLeader(group, memberId) {
-			for _, member := range group.members {
-				members = append(members, &service.Member{MemberId: member.memberId, GroupInstanceId: nil, Metadata: member.metadata})
-			}
-		}
+		members := gcs.getLeaderMembers(group, memberId)
 		return &service.JoinGroupResp{
 			ErrorCode:    service.NONE,
 			GenerationId: group.generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
-			LeaderId:     group.leader,
+			LeaderId:     gcs.getMemberLeader(group),
 			MemberId:     memberId,
 			Members:      members,
 		}, nil
@@ -184,7 +174,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}, nil
 			}
 		} else {
-			if isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
+			if gcs.isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
 				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
 				if err != nil {
 					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
@@ -195,18 +185,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}
 			}
 		}
-		var members []*service.Member
-		if isMemberLeader(group, memberId) {
-			for _, member := range group.members {
-				members = append(members, &service.Member{MemberId: member.memberId, GroupInstanceId: nil, Metadata: member.metadata})
-			}
-		}
+		members := gcs.getLeaderMembers(group, memberId)
 		return &service.JoinGroupResp{
 			ErrorCode:    service.NONE,
 			GenerationId: group.generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
-			LeaderId:     group.leader,
+			LeaderId:     gcs.getMemberLeader(group),
 			MemberId:     memberId,
 			Members:      members,
 		}, nil
@@ -257,7 +242,7 @@ func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string,
 
 	if gcs.getGroupStatus(group) == CompletingRebalance {
 		// get assignment from leader member
-		if isMemberLeader(group, memberId) {
+		if gcs.isMemberLeader(group, memberId) {
 			for i := range groupAssignments {
 				logrus.Infof("Assignment %#+v received from leader %s for group %s for generation %d", groupAssignments[i], memberId, groupId, generation)
 				group.members[groupAssignments[i].MemberId].assignment = []byte(groupAssignments[i].MemberAssignment)
@@ -315,6 +300,9 @@ func (gcs *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 	}
 	membersMetadata := group.members
 	for i := range members {
+		if members[i].MemberId == gcs.getMemberLeader(group) {
+			gcs.setMemberLeader(group, "")
+		}
 		delete(membersMetadata, members[i].MemberId)
 		logrus.Infof("reader member: %s success leave group: %s", members[i].MemberId, groupId)
 	}
@@ -346,7 +334,6 @@ func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clien
 		protocolMap[protocols[i].ProtocolName] = protocols[i].ProtocolMetadata
 	}
 	if gcs.getGroupStatus(group) == Empty {
-		group.leader = memberId
 		gcs.vote(group, protocols)
 	}
 	group.groupLock.Lock()
@@ -503,6 +490,31 @@ func matchProtocols(groupProtocols map[string]string, memberProtocols []*service
 	return true
 }
 
-func isMemberLeader(group *Group, memberId string) bool {
-	return group.leader == memberId
+func (gcs *GroupCoordinatorStandalone) isMemberLeader(group *Group, memberId string) bool {
+	return gcs.getMemberLeader(group) == memberId
+}
+
+func (gcs *GroupCoordinatorStandalone) getMemberLeader(group *Group) string {
+	group.groupMemberLock.RLock()
+	leader := group.leader
+	group.groupMemberLock.RUnlock()
+	return leader
+}
+
+func (gcs *GroupCoordinatorStandalone) setMemberLeader(group *Group, leader string) {
+	group.groupMemberLock.Lock()
+	group.leader = leader
+	group.groupMemberLock.Unlock()
+}
+
+func (gcs *GroupCoordinatorStandalone) getLeaderMembers(group *Group, memberId string) (members []*service.Member) {
+	if gcs.getMemberLeader(group) == "" {
+		gcs.setMemberLeader(group, memberId)
+	}
+	if gcs.isMemberLeader(group, memberId) {
+		for _, member := range group.members {
+			members = append(members, &service.Member{MemberId: member.memberId, GroupInstanceId: nil, Metadata: member.metadata})
+		}
+	}
+	return members
 }

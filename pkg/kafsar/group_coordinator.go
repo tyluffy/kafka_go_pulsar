@@ -37,6 +37,7 @@ type Group struct {
 	generationId      int
 	groupLock         sync.RWMutex
 	groupStatusLock   sync.RWMutex
+	groupMemberLock   sync.RWMutex
 	sessionTimeoutMs  int
 }
 

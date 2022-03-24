@@ -50,17 +50,25 @@ var (
 func TestHandleJoinGroup(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	resp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp.ErrorCode)
 	group, err := groupCoordinator.GetGroup(groupId)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 
 	resp, err = groupCoordinator.HandleJoinGroup("test-group-id-2", memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp.ErrorCode)
 	group, err = groupCoordinator.GetGroup(groupId)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 	assert.Equal(t, 2, len(groupCoordinator.groupManager))
 }
@@ -84,10 +92,14 @@ func TestGroupRebalance(t *testing.T) {
 	}()
 
 	resp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp.ErrorCode)
 	group, err := groupCoordinator.GetGroup(groupId)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 }
 
@@ -101,10 +113,14 @@ func TestNotifyReJoinGroup(t *testing.T) {
 	}
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, config, nil)
 	resp1, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp1.ErrorCode)
 	group, err := groupCoordinator.GetGroup(groupId)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 	memberId1 := resp1.MemberId
 	assert.Equal(t, resp1.LeaderId, memberId1)
@@ -115,9 +131,10 @@ func TestNotifyReJoinGroup(t *testing.T) {
 		assert.Equal(t, service.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
 	}()
 	resp2, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp2.ErrorCode)
-	assert.Nil(t, err)
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 	assert.Equal(t, memberId1, resp2.LeaderId)
 }
@@ -125,11 +142,15 @@ func TestNotifyReJoinGroup(t *testing.T) {
 func TestHandleJoinGroupMultiMember(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	resp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp.ErrorCode)
 
 	resp, err = groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.UNKNOWN_SERVER_ERROR, resp.ErrorCode)
 }
 
@@ -138,26 +159,34 @@ func TestHandleJoinGroupInvalidParams(t *testing.T) {
 	groupCoordinatorEmptyGroupId := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	groupIdEmpty := ""
 	resp, err := groupCoordinatorEmptyGroupId.HandleJoinGroup(groupIdEmpty, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.INVALID_GROUP_ID, resp.ErrorCode)
 
 	// invalid protocol
 	groupCoordinatorEmptyProtocol := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	var protocolsEmpty []*service.GroupProtocol
 	resp, err = groupCoordinatorEmptyProtocol.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocolsEmpty)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.INCONSISTENT_GROUP_PROTOCOL, resp.ErrorCode)
 	groupCoordinatorEmptyProtocolType := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	protocolTypeEmpty := ""
 	resp, err = groupCoordinatorEmptyProtocolType.HandleJoinGroup(groupId, memberId, clientId, protocolTypeEmpty, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.INCONSISTENT_GROUP_PROTOCOL, resp.ErrorCode)
 }
 
 func TestHandleSyncGroup(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	joinGroupResp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 	assert.Equal(t, joinGroupResp.MemberId, joinGroupResp.LeaderId)
 	assert.Equal(t, 1, len(joinGroupResp.Members))
@@ -170,7 +199,9 @@ func TestHandleSyncGroup(t *testing.T) {
 	var groupAssignment []*service.GroupAssignment
 	groupAssignments := append(groupAssignment, &assignment)
 	syncGroupResp, err := groupCoordinator.HandleSyncGroup(groupId, memberId, generation, groupAssignments)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, syncGroupResp.ErrorCode)
 	assert.Equal(t, Stable, groupCoordinator.groupManager[groupId].groupStatus)
 }
@@ -178,7 +209,9 @@ func TestHandleSyncGroup(t *testing.T) {
 func TestHandleSyncGroupInvalidParams(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	joinGroupResp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
 
 	memberId = joinGroupResp.MemberId
@@ -191,29 +224,87 @@ func TestHandleSyncGroupInvalidParams(t *testing.T) {
 	// invalid groupId
 	groupIdEmpty := ""
 	syncGroupResp, err := groupCoordinator.HandleSyncGroup(groupIdEmpty, memberId, generation, groupAssignments)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.INVALID_GROUP_ID, syncGroupResp.ErrorCode)
 
 	// invalid memberId
 	memberIdInvalid := "test-member-id-invalid"
 	syncGroupResp, err = groupCoordinator.HandleSyncGroup(groupId, memberIdInvalid, generation, groupAssignments)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.UNKNOWN_MEMBER_ID, syncGroupResp.ErrorCode)
 }
 
 func TestLeaveGroup(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
 	resp, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, resp.ErrorCode)
+	group := groupCoordinator.groupManager[groupId]
+	assert.Equal(t, group.leader, resp.MemberId)
 
 	var members []*service.LeaveGroupMember
 	leaveGroupMembers := append(members, &service.LeaveGroupMember{
-		MemberId: memberId,
+		MemberId: resp.MemberId,
 	})
 	leaveGroupResp, err := groupCoordinator.HandleLeaveGroup(groupId, leaveGroupMembers)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, service.NONE, leaveGroupResp.ErrorCode)
+	assert.Empty(t, group.leader)
+}
+
+func TestMultiConsumerLeaveGroup(t *testing.T) {
+	config := KafsarConfig{
+		MaxConsumersPerGroup:     10,
+		GroupMinSessionTimeoutMs: 0,
+		GroupMaxSessionTimeoutMs: 30000,
+		InitialDelayedJoinMs:     3000,
+		RebalanceTickMs:          100,
+	}
+	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, config, nil)
+	// leader member join group
+	resp1, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, resp1.ErrorCode)
+	group := groupCoordinator.groupManager[groupId]
+	assert.Equal(t, group.leader, resp1.MemberId)
+
+	// follower member join group
+	resp2, err := groupCoordinator.HandleJoinGroup(groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, resp2.ErrorCode)
+	assert.Equal(t, group.leader, resp1.MemberId)
+
+	// leader member leave group
+	var members []*service.LeaveGroupMember
+	leaveGroupMembers := append(members, &service.LeaveGroupMember{
+		MemberId: resp1.MemberId,
+	})
+	leaveGroupResp, err := groupCoordinator.HandleLeaveGroup(groupId, leaveGroupMembers)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, leaveGroupResp.ErrorCode)
+	assert.Empty(t, group.leader)
+
+	// follower member rejoin group
+	resp2, err = groupCoordinator.HandleJoinGroup(groupId, resp2.MemberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, resp2.ErrorCode)
+	assert.Equal(t, resp2.MemberId, group.leader)
 }
 
 func TestHeartBeatRebalanceInProgress(t *testing.T) {
