@@ -218,8 +218,12 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	k.readerManager[group.partitionedTopic].reader.Close()
-	delete(k.readerManager, group.partitionedTopic)
+	readerMetadata, exist := k.readerManager[group.partitionedTopic]
+	if exist {
+		readerMetadata.reader.Close()
+		delete(k.readerManager, group.partitionedTopic)
+		readerMetadata = nil
+	}
 	return leaveGroupResp, nil
 }
 

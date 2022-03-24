@@ -881,3 +881,85 @@ func TestMaxBytesMsg(t *testing.T) {
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 2, len(fetchPartitionResp.RecordBatch.Records))
 }
+
+func TestMultiMemberLeaveGroup(t *testing.T) {
+	topic := uuid.New().String()
+	groupId := uuid.New().String()
+	newConfig := config
+	newConfig.KafsarConfig.MaxConsumersPerGroup = 10
+	k, err := kafsar.NewKafsar(kafsarServer, newConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
+
+	// join group
+	joinGroupReq := service.JoinGroupReq{
+		ClientId:       clientId,
+		GroupId:        groupId,
+		SessionTimeout: sessionTimeoutMs,
+		ProtocolType:   protocolType,
+		GroupProtocols: protocols,
+	}
+	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+
+	// join group
+	joinGroupReq = service.JoinGroupReq{
+		ClientId:       clientId,
+		GroupId:        groupId,
+		SessionTimeout: sessionTimeoutMs,
+		ProtocolType:   protocolType,
+		GroupProtocols: protocols,
+	}
+	joinGroupResp2, err := k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp2.ErrorCode)
+
+	// offset fetch
+	offsetFetchReq := service.OffsetFetchPartitionReq{
+		GroupId:     groupId,
+		ClientId:    testClientId,
+		PartitionId: partition,
+	}
+	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
+
+	var members []*service.LeaveGroupMember
+	leaveGroupMembers := append(members, &service.LeaveGroupMember{
+		MemberId: joinGroupResp.MemberId,
+	})
+
+	leaveGroupResp, err := k.GroupLeave(&addr, &service.LeaveGroupReq{ClientId: clientId, GroupId: groupId, Members: leaveGroupMembers})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, leaveGroupResp.ErrorCode)
+
+	var members2 []*service.LeaveGroupMember
+	leaveGroupMembers2 := append(members2, &service.LeaveGroupMember{
+		MemberId: joinGroupResp.MemberId,
+	})
+
+	leaveGroupResp2, err := k.GroupLeave(&addr, &service.LeaveGroupReq{ClientId: clientId, GroupId: groupId, Members: leaveGroupMembers2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, leaveGroupResp2.ErrorCode)
+}

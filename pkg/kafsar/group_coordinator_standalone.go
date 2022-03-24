@@ -309,11 +309,8 @@ func (gcs *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 	if len(group.members) == 0 {
 		gcs.setGroupStatus(group, Empty)
 	}
-	consumerMetadata := group.consumerMetadata
-	if consumerMetadata != nil {
-		consumerMetadata.reader.Close()
-	}
-	group.consumerMetadata = nil
+	// any member leave group should do rebalance
+	gcs.setGroupStatus(group, PreparingRebalance)
 	return &service.LeaveGroupResp{ErrorCode: service.NONE, Members: members}, nil
 }
 
