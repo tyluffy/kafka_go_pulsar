@@ -400,7 +400,9 @@ func (gcs *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayM
 
 func (gcs *GroupCoordinatorStandalone) vote(group *Group, protocols []*service.GroupProtocol) {
 	// TODO make clear multiple protocol scene
+	gcs.mutex.RLock()
 	group.supportedProtocol = protocols[0].ProtocolName
+	gcs.mutex.RUnlock()
 }
 
 func (gcs *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, sessionTimeout int, waitForStatus GroupStatus) error {
