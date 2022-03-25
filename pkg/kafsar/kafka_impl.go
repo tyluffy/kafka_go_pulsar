@@ -404,7 +404,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if !exist {
 		k.mutex.Lock()
 		metadata := ReaderMetadata{groupId: req.GroupId, messageIds: list.New()}
-		channel, reader, err := k.createReader(partitionedTopic, req.PartitionId, subscriptionName, messageId)
+		channel, reader, err := k.createReader(partitionedTopic, subscriptionName, messageId)
 		if err != nil {
 			logrus.Errorf("%s, create channel failed, error: %s", topic, err)
 			return &service.OffsetFetchPartitionResp{
@@ -439,7 +439,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 func (k *KafkaImpl) partitionedTopic(user *userInfo, kafkaTopic string, partitionId int) (string, error) {
 	pulsarTopic, err := k.server.PulsarTopic(user.username, kafkaTopic)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return pulsarTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partitionId), nil
 }
@@ -528,10 +528,10 @@ func (k *KafkaImpl) GetOffsetManager() OffsetManager {
 	return k.offsetManager
 }
 
-func (k *KafkaImpl) createReader(topic string, partition int, subscriptionName string, messageId pulsar.MessageID) (chan pulsar.ReaderMessage, pulsar.Reader, error) {
+func (k *KafkaImpl) createReader(partitionedTopic string, subscriptionName string, messageId pulsar.MessageID) (chan pulsar.ReaderMessage, pulsar.Reader, error) {
 	channel := make(chan pulsar.ReaderMessage, k.kafsarConfig.ConsumerReceiveQueueSize)
 	options := pulsar.ReaderOptions{
-		Topic:             topic,
+		Topic:             partitionedTopic,
 		Name:              subscriptionName,
 		StartMessageID:    messageId,
 		MessageChannel:    channel,

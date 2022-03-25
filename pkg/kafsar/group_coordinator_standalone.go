@@ -46,7 +46,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 	// do parameters check
 	memberId, code, err := gcs.joinGroupParamsCheck(clientId, groupId, memberId, sessionTimeoutMs, gcs.kafsarConfig)
 	if err != nil {
-		logrus.Errorf("join group %s failed, cause: %s", groupId, err)
+		logrus.Errorf("join group %s params check failed, cause: %s", groupId, err)
 		return &service.JoinGroupResp{
 			MemberId:  memberId,
 			ErrorCode: code,
@@ -70,7 +70,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 
 	code, err = gcs.joinGroupProtocolCheck(group, protocolType, protocols, gcs.kafsarConfig)
 	if err != nil {
-		logrus.Errorf("join group %s failed, cause: %s", groupId, err)
+		logrus.Errorf("join group %s protocol check failed, cause: %s", groupId, err)
 		return &service.JoinGroupResp{
 			MemberId:  memberId,
 			ErrorCode: code,
