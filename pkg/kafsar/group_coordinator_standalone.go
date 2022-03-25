@@ -41,10 +41,10 @@ func NewGroupCoordinatorStandalone(pulsarConfig PulsarConfig, kafsarConfig Kafsa
 	return &coordinatorImpl
 }
 
-func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
+func (g *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
 	protocols []*service.GroupProtocol) (*service.JoinGroupResp, error) {
 	// do parameters check
-	memberId, code, err := gcs.joinGroupParamsCheck(clientId, groupId, memberId, sessionTimeoutMs, gcs.kafsarConfig)
+	memberId, code, err := g.joinGroupParamsCheck(clientId, groupId, memberId, sessionTimeoutMs, g.kafsarConfig)
 	if err != nil {
 		logrus.Errorf("join group %s params check failed, cause: %s", groupId, err)
 		return &service.JoinGroupResp{
@@ -53,8 +53,8 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		}, nil
 	}
 
-	gcs.mutex.Lock()
-	group, exist := gcs.groupManager[groupId]
+	g.mutex.Lock()
+	group, exist := g.groupManager[groupId]
 	if !exist {
 		group = &Group{
 			groupId:          groupId,
@@ -64,11 +64,11 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 			canRebalance:     true,
 			sessionTimeoutMs: sessionTimeoutMs,
 		}
-		gcs.groupManager[groupId] = group
+		g.groupManager[groupId] = group
 	}
-	gcs.mutex.Unlock()
+	g.mutex.Unlock()
 
-	code, err = gcs.joinGroupProtocolCheck(group, protocolType, protocols, gcs.kafsarConfig)
+	code, err = g.joinGroupProtocolCheck(group, protocolType, protocols, g.kafsarConfig)
 	if err != nil {
 		logrus.Errorf("join group %s protocol check failed, cause: %s", groupId, err)
 		return &service.JoinGroupResp{
@@ -80,16 +80,16 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 	group.groupLock.RLock()
 	numMember := len(group.members)
 	group.groupLock.RUnlock()
-	if gcs.kafsarConfig.MaxConsumersPerGroup > 0 && numMember >= gcs.kafsarConfig.MaxConsumersPerGroup {
+	if g.kafsarConfig.MaxConsumersPerGroup > 0 && numMember >= g.kafsarConfig.MaxConsumersPerGroup {
 		logrus.Errorf("join group failed, exceed maximum number of members. groupId: %s, memberId: %s, current: %d, maxConsumersPerGroup: %d",
-			groupId, memberId, numMember, gcs.kafsarConfig.MaxConsumersPerGroup)
+			groupId, memberId, numMember, g.kafsarConfig.MaxConsumersPerGroup)
 		return &service.JoinGroupResp{
 			MemberId:  memberId,
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 
-	if gcs.getGroupStatus(group) == Dead {
+	if g.getGroupStatus(group) == Dead {
 		logrus.Errorf("join group failed, cause group status is dead. groupId: %s, memberId: %s", groupId, memberId)
 		return &service.JoinGroupResp{
 			MemberId:  memberId,
@@ -97,9 +97,9 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		}, nil
 	}
 
-	if gcs.getGroupStatus(group) == PreparingRebalance {
+	if g.getGroupStatus(group) == PreparingRebalance {
 		if memberId == EmptyMemberId {
-			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			memberId, err = g.addMemberAndRebalance(group, clientId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
@@ -108,7 +108,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}, nil
 			}
 		} else {
-			err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			err := g.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				return &service.JoinGroupResp{
 					MemberId:  memberId,
@@ -116,21 +116,21 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}, nil
 			}
 		}
-		members := gcs.getLeaderMembers(group, memberId)
+		members := g.getLeaderMembers(group, memberId)
 		return &service.JoinGroupResp{
 			ErrorCode:    service.NONE,
 			GenerationId: group.generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
-			LeaderId:     gcs.getMemberLeader(group),
+			LeaderId:     g.getMemberLeader(group),
 			MemberId:     memberId,
 			Members:      members,
 		}, nil
 	}
 
-	if gcs.getGroupStatus(group) == CompletingRebalance {
+	if g.getGroupStatus(group) == CompletingRebalance {
 		if memberId == EmptyMemberId {
-			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			memberId, err = g.addMemberAndRebalance(group, clientId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
@@ -141,7 +141,7 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 		} else {
 			if !matchProtocols(group.groupProtocols, protocols) {
 				// member is joining with the different metadata
-				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+				err := g.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 				if err != nil {
 					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 					return &service.JoinGroupResp{
@@ -151,21 +151,21 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}
 			}
 		}
-		members := gcs.getLeaderMembers(group, memberId)
+		members := g.getLeaderMembers(group, memberId)
 		return &service.JoinGroupResp{
 			ErrorCode:    service.NONE,
 			GenerationId: group.generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
-			LeaderId:     gcs.getMemberLeader(group),
+			LeaderId:     g.getMemberLeader(group),
 			MemberId:     memberId,
 			Members:      members,
 		}, nil
 	}
 
-	if gcs.getGroupStatus(group) == Empty || gcs.getGroupStatus(group) == Stable {
+	if g.getGroupStatus(group) == Empty || g.getGroupStatus(group) == Stable {
 		if memberId == EmptyMemberId {
-			memberId, err = gcs.addMemberAndRebalance(group, clientId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			memberId, err = g.addMemberAndRebalance(group, clientId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
@@ -174,8 +174,8 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}, nil
 			}
 		} else {
-			if gcs.isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
-				err := gcs.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, gcs.kafsarConfig.InitialDelayedJoinMs)
+			if g.isMemberLeader(group, memberId) || !matchProtocols(group.groupProtocols, protocols) {
+				err := g.updateMemberAndRebalance(group, clientId, memberId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 				if err != nil {
 					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 					return &service.JoinGroupResp{
@@ -185,13 +185,13 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 				}
 			}
 		}
-		members := gcs.getLeaderMembers(group, memberId)
+		members := g.getLeaderMembers(group, memberId)
 		return &service.JoinGroupResp{
 			ErrorCode:    service.NONE,
 			GenerationId: group.generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
-			LeaderId:     gcs.getMemberLeader(group),
+			LeaderId:     g.getMemberLeader(group),
 			MemberId:     memberId,
 			Members:      members,
 		}, nil
@@ -202,16 +202,16 @@ func (gcs *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, client
 	}, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string, generation int,
+func (g *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string, generation int,
 	groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error) {
-	code, err := gcs.syncGroupParamsCheck(groupId, memberId)
+	code, err := g.syncGroupParamsCheck(groupId, memberId)
 	if err != nil {
 		logrus.Errorf("member %s snyc group %s failed, cause: %s", memberId, groupId, err)
 		return &service.SyncGroupResp{ErrorCode: code}, nil
 	}
-	gcs.mutex.RLock()
-	group, exist := gcs.groupManager[groupId]
-	gcs.mutex.RUnlock()
+	g.mutex.RLock()
+	group, exist := g.groupManager[groupId]
+	g.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("sync group %s failed, cause invalid groupId", groupId)
 		return &service.SyncGroupResp{
@@ -227,33 +227,33 @@ func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string,
 	}
 	// TODO generation check
 
-	if gcs.getGroupStatus(group) == Empty || gcs.getGroupStatus(group) == Dead {
+	if g.getGroupStatus(group) == Empty || g.getGroupStatus(group) == Dead {
 		return &service.SyncGroupResp{
 			ErrorCode: service.UNKNOWN_MEMBER_ID,
 		}, nil
 	}
 
 	// maybe new member add, need to rebalance again
-	if gcs.getGroupStatus(group) == PreparingRebalance {
+	if g.getGroupStatus(group) == PreparingRebalance {
 		return &service.SyncGroupResp{
 			ErrorCode: service.REBALANCE_IN_PROGRESS,
 		}, nil
 	}
 
-	if gcs.getGroupStatus(group) == CompletingRebalance {
+	if g.getGroupStatus(group) == CompletingRebalance {
 		// get assignment from leader member
-		if gcs.isMemberLeader(group, memberId) {
+		if g.isMemberLeader(group, memberId) {
 			for i := range groupAssignments {
 				logrus.Infof("Assignment %#+v received from leader %s for group %s for generation %d", groupAssignments[i], memberId, groupId, generation)
 				group.members[groupAssignments[i].MemberId].assignment = []byte(groupAssignments[i].MemberAssignment)
 			}
-			gcs.setGroupStatus(group, Stable)
+			g.setGroupStatus(group, Stable)
 			return &service.SyncGroupResp{
 				ErrorCode:        service.NONE,
 				MemberAssignment: string(group.members[memberId].assignment),
 			}, nil
 		}
-		err := gcs.awaitingRebalance(group, gcs.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, Stable)
+		err := g.awaitingRebalance(group, g.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, Stable)
 		if err != nil {
 			logrus.Errorf("member %s sync group %s failed, cause: %s", memberId, groupId, err)
 			return &service.SyncGroupResp{
@@ -269,7 +269,7 @@ func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string,
 	}
 
 	// if the group is stable, we just return the current assignment
-	if gcs.getGroupStatus(group) == Stable {
+	if g.getGroupStatus(group) == Stable {
 		return &service.SyncGroupResp{
 			ErrorCode:        service.NONE,
 			MemberAssignment: string(group.members[memberId].assignment),
@@ -280,7 +280,7 @@ func (gcs *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string,
 	}, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
+func (g *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 	members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error) {
 	// reject if groupId is empty
 	if groupId == "" {
@@ -289,9 +289,9 @@ func (gcs *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 			ErrorCode: service.INVALID_GROUP_ID,
 		}, nil
 	}
-	gcs.mutex.RLock()
-	group, exist := gcs.groupManager[groupId]
-	gcs.mutex.RUnlock()
+	g.mutex.RLock()
+	group, exist := g.groupManager[groupId]
+	g.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("leave group failed, cause group not exist")
 		return &service.LeaveGroupResp{
@@ -300,38 +300,38 @@ func (gcs *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 	}
 	membersMetadata := group.members
 	for i := range members {
-		if members[i].MemberId == gcs.getMemberLeader(group) {
-			gcs.setMemberLeader(group, "")
+		if members[i].MemberId == g.getMemberLeader(group) {
+			g.setMemberLeader(group, "")
 		}
 		delete(membersMetadata, members[i].MemberId)
 		logrus.Infof("reader member: %s success leave group: %s", members[i].MemberId, groupId)
 	}
 	if len(group.members) == 0 {
-		gcs.setGroupStatus(group, Empty)
+		g.setGroupStatus(group, Empty)
 	}
 	// any member leave group should do rebalance
-	gcs.setGroupStatus(group, PreparingRebalance)
+	g.setGroupStatus(group, PreparingRebalance)
 	return &service.LeaveGroupResp{ErrorCode: service.NONE, Members: members}, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) GetGroup(groupId string) (*Group, error) {
-	gcs.mutex.RLock()
-	group, exist := gcs.groupManager[groupId]
-	gcs.mutex.RUnlock()
+func (g *GroupCoordinatorStandalone) GetGroup(groupId string) (*Group, error) {
+	g.mutex.RLock()
+	group, exist := g.groupManager[groupId]
+	g.mutex.RUnlock()
 	if !exist {
 		return nil, errors.New("invalid groupId")
 	}
 	return group, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) (string, error) {
+func (g *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) (string, error) {
 	memberId := clientId + "-" + uuid.New().String()
 	protocolMap := make(map[string]string)
 	for i := range protocols {
 		protocolMap[protocols[i].ProtocolName] = protocols[i].ProtocolMetadata
 	}
-	if gcs.getGroupStatus(group) == Empty {
-		gcs.vote(group, protocols)
+	if g.getGroupStatus(group) == Empty {
+		g.vote(group, protocols)
 	}
 	group.groupLock.Lock()
 	group.members[memberId] = &memberMetadata{
@@ -342,32 +342,32 @@ func (gcs *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clien
 		protocols:    protocolMap,
 	}
 	group.groupLock.Unlock()
-	gcs.prepareRebalance(group)
-	return memberId, gcs.doRebalance(group, rebalanceDelayMs)
+	g.prepareRebalance(group)
+	return memberId, g.doRebalance(group, rebalanceDelayMs)
 }
 
-func (gcs *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clientId, memberId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) error {
-	gcs.prepareRebalance(group)
-	return gcs.doRebalance(group, rebalanceDelayMs)
+func (g *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clientId, memberId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) error {
+	g.prepareRebalance(group)
+	return g.doRebalance(group, rebalanceDelayMs)
 }
 
-func (gcs *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.HeartBeatResp {
+func (g *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.HeartBeatResp {
 	if groupId == "" {
 		logrus.Errorf("groupId is empty.")
 		return &service.HeartBeatResp{
 			ErrorCode: service.INVALID_GROUP_ID,
 		}
 	}
-	gcs.mutex.RLock()
-	group, exist := gcs.groupManager[groupId]
-	gcs.mutex.RUnlock()
+	g.mutex.RLock()
+	group, exist := g.groupManager[groupId]
+	g.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("get group failed. cause group not exist, groupId: %s", groupId)
 		return &service.HeartBeatResp{
 			ErrorCode: service.REBALANCE_IN_PROGRESS,
 		}
 	}
-	if gcs.getGroupStatus(group) == PreparingRebalance || gcs.getGroupStatus(group) == CompletingRebalance || gcs.getGroupStatus(group) == Dead {
+	if g.getGroupStatus(group) == PreparingRebalance || g.getGroupStatus(group) == CompletingRebalance || g.getGroupStatus(group) == Dead {
 		logrus.Infof("preparing rebalance. groupId: %s", groupId)
 		return &service.HeartBeatResp{
 			ErrorCode: service.REBALANCE_IN_PROGRESS,
@@ -376,39 +376,39 @@ func (gcs *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.
 	return &service.HeartBeatResp{ErrorCode: service.NONE}
 }
 
-func (gcs *GroupCoordinatorStandalone) prepareRebalance(group *Group) {
-	gcs.setGroupStatus(group, PreparingRebalance)
+func (g *GroupCoordinatorStandalone) prepareRebalance(group *Group) {
+	g.setGroupStatus(group, PreparingRebalance)
 }
 
-func (gcs *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayMs int) error {
+func (g *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayMs int) error {
 	group.groupLock.Lock()
 	if group.canRebalance {
 		group.canRebalance = false
 		group.groupLock.Unlock()
 		logrus.Infof("preparing to rebalance group %s with old generation %d", group.groupId, group.generationId)
 		time.Sleep(time.Duration(rebalanceDelayMs) * time.Millisecond)
-		gcs.setGroupStatus(group, CompletingRebalance)
+		g.setGroupStatus(group, CompletingRebalance)
 		group.generationId++
 		logrus.Infof("completing rebalance group %s with new generation %d", group.groupId, group.generationId)
 		group.canRebalance = true
 		return nil
 	} else {
 		group.groupLock.Unlock()
-		return gcs.awaitingRebalance(group, gcs.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, CompletingRebalance)
+		return g.awaitingRebalance(group, g.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, CompletingRebalance)
 	}
 }
 
-func (gcs *GroupCoordinatorStandalone) vote(group *Group, protocols []*service.GroupProtocol) {
+func (g *GroupCoordinatorStandalone) vote(group *Group, protocols []*service.GroupProtocol) {
 	// TODO make clear multiple protocol scene
-	gcs.mutex.RLock()
+	g.mutex.Lock()
 	group.supportedProtocol = protocols[0].ProtocolName
-	gcs.mutex.RUnlock()
+	g.mutex.Unlock()
 }
 
-func (gcs *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, sessionTimeout int, waitForStatus GroupStatus) error {
+func (g *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, sessionTimeout int, waitForStatus GroupStatus) error {
 	start := time.Now()
 	for {
-		if gcs.getGroupStatus(group) == waitForStatus {
+		if g.getGroupStatus(group) == waitForStatus {
 			return nil
 		}
 		if time.Since(start).Milliseconds() >= int64(sessionTimeout) {
@@ -418,20 +418,20 @@ func (gcs *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalance
 	}
 }
 
-func (gcs *GroupCoordinatorStandalone) getGroupStatus(group *Group) GroupStatus {
+func (g *GroupCoordinatorStandalone) getGroupStatus(group *Group) GroupStatus {
 	group.groupStatusLock.RLock()
 	status := group.groupStatus
 	group.groupStatusLock.RUnlock()
 	return status
 }
 
-func (gcs *GroupCoordinatorStandalone) setGroupStatus(group *Group, status GroupStatus) {
+func (g *GroupCoordinatorStandalone) setGroupStatus(group *Group, status GroupStatus) {
 	group.groupStatusLock.Lock()
 	group.groupStatus = status
 	group.groupStatusLock.Unlock()
 }
 
-func (gcs *GroupCoordinatorStandalone) syncGroupParamsCheck(groupId, memberId string) (service.ErrorCode, error) {
+func (g *GroupCoordinatorStandalone) syncGroupParamsCheck(groupId, memberId string) (service.ErrorCode, error) {
 	// reject if groupId is empty
 	if groupId == "" {
 		return service.INVALID_GROUP_ID, errors.Errorf("groupId is empty")
@@ -443,7 +443,7 @@ func (gcs *GroupCoordinatorStandalone) syncGroupParamsCheck(groupId, memberId st
 	return service.NONE, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) joinGroupParamsCheck(clientId, groupId, memberId string, sessionTimeoutMs int, config KafsarConfig) (string, service.ErrorCode, error) {
+func (g *GroupCoordinatorStandalone) joinGroupParamsCheck(clientId, groupId, memberId string, sessionTimeoutMs int, config KafsarConfig) (string, service.ErrorCode, error) {
 	// reject if groupId is empty
 	if groupId == "" {
 		return memberId, service.INVALID_GROUP_ID, errors.Errorf("empty groupId")
@@ -457,9 +457,9 @@ func (gcs *GroupCoordinatorStandalone) joinGroupParamsCheck(clientId, groupId, m
 	return memberId, service.NONE, nil
 }
 
-func (gcs *GroupCoordinatorStandalone) joinGroupProtocolCheck(group *Group, protocolType string, protocols []*service.GroupProtocol, config KafsarConfig) (service.ErrorCode, error) {
+func (g *GroupCoordinatorStandalone) joinGroupProtocolCheck(group *Group, protocolType string, protocols []*service.GroupProtocol, config KafsarConfig) (service.ErrorCode, error) {
 	// if the new member does not support the group protocol, reject it
-	if gcs.getGroupStatus(group) != Empty {
+	if g.getGroupStatus(group) != Empty {
 		if group.protocolType != protocolType {
 			return service.INCONSISTENT_GROUP_PROTOCOL, errors.Errorf("invalid protocolType: %s, and this group protocolType is %s", protocolType, group.protocolType)
 		}
@@ -469,7 +469,7 @@ func (gcs *GroupCoordinatorStandalone) joinGroupProtocolCheck(group *Group, prot
 	}
 
 	// reject if first member with empty group protocol or protocolType is empty
-	if gcs.getGroupStatus(group) == Empty {
+	if g.getGroupStatus(group) == Empty {
 		if protocolType == "" {
 			return service.INCONSISTENT_GROUP_PROTOCOL, errors.Errorf("empty protocolType")
 		}
@@ -489,28 +489,28 @@ func matchProtocols(groupProtocols map[string]string, memberProtocols []*service
 	return true
 }
 
-func (gcs *GroupCoordinatorStandalone) isMemberLeader(group *Group, memberId string) bool {
-	return gcs.getMemberLeader(group) == memberId
+func (g *GroupCoordinatorStandalone) isMemberLeader(group *Group, memberId string) bool {
+	return g.getMemberLeader(group) == memberId
 }
 
-func (gcs *GroupCoordinatorStandalone) getMemberLeader(group *Group) string {
+func (g *GroupCoordinatorStandalone) getMemberLeader(group *Group) string {
 	group.groupMemberLock.RLock()
 	leader := group.leader
 	group.groupMemberLock.RUnlock()
 	return leader
 }
 
-func (gcs *GroupCoordinatorStandalone) setMemberLeader(group *Group, leader string) {
+func (g *GroupCoordinatorStandalone) setMemberLeader(group *Group, leader string) {
 	group.groupMemberLock.Lock()
 	group.leader = leader
 	group.groupMemberLock.Unlock()
 }
 
-func (gcs *GroupCoordinatorStandalone) getLeaderMembers(group *Group, memberId string) (members []*service.Member) {
-	if gcs.getMemberLeader(group) == "" {
-		gcs.setMemberLeader(group, memberId)
+func (g *GroupCoordinatorStandalone) getLeaderMembers(group *Group, memberId string) (members []*service.Member) {
+	if g.getMemberLeader(group) == "" {
+		g.setMemberLeader(group, memberId)
 	}
-	if gcs.isMemberLeader(group, memberId) {
+	if g.isMemberLeader(group, memberId) {
 		for _, member := range group.members {
 			members = append(members, &service.Member{MemberId: member.memberId, GroupInstanceId: nil, Metadata: member.metadata})
 		}
