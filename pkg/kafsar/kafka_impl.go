@@ -66,6 +66,10 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	if err != nil {
 		kafka.pulsarClient.Close()
 	}
+	err = kafka.offsetManager.Start()
+	if err != nil {
+		kafka.pulsarClient.Close()
+	}
 	if kafka.kafsarConfig.GroupCoordinatorType == Cluster {
 		kafka.groupCoordinator = NewGroupCoordinatorCluster()
 	} else if kafka.kafsarConfig.GroupCoordinatorType == Standalone {

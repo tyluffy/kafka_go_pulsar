@@ -18,6 +18,8 @@
 package kafsar
 
 type OffsetManager interface {
+	Start() error
+
 	CommitOffset(username, kafkaTopic, groupId string, partition int, pair MessageIdPair) error
 
 	AcquireOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool)

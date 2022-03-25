@@ -52,8 +52,12 @@ func NewOffsetManager(client pulsar.Client, config KafsarConfig) (OffsetManager,
 		consumer:  consumer,
 		offsetMap: make(map[string]MessageIdPair),
 	}
-	impl.startOffsetConsumer()
 	return &impl, nil
+}
+
+func (o *OffsetManagerImpl) Start() error {
+	o.startOffsetConsumer()
+	return nil
 }
 
 func (o *OffsetManagerImpl) startOffsetConsumer() {

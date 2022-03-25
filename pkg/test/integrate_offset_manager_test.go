@@ -42,6 +42,10 @@ func TestOffsetManager(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = manager.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer manager.Close()
 
 	// wait for manager start
