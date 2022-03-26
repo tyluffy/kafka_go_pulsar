@@ -203,7 +203,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -216,7 +216,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 	}
 	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, minBytes, 2000, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
@@ -288,7 +288,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -301,7 +301,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 	}
 	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, minBytes, 2000, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
@@ -353,7 +353,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	// offset fetch
 	offsetFetchReq = service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err = k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -442,7 +442,7 @@ func TestEarliestMsg(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -454,7 +454,7 @@ func TestEarliestMsg(t *testing.T) {
 	// offset fetch
 	listOffset := service.ListOffsetsPartitionReq{
 		Time:        constant.TimeEarliest,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
@@ -467,7 +467,7 @@ func TestEarliestMsg(t *testing.T) {
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 	}
 	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, minBytes, 2000, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
@@ -545,7 +545,7 @@ func TestLatestMsg(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -557,7 +557,7 @@ func TestLatestMsg(t *testing.T) {
 	// offset fetch
 	listOffset := service.ListOffsetsPartitionReq{
 		Time:        constant.TimeLasted,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
@@ -570,7 +570,7 @@ func TestLatestMsg(t *testing.T) {
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 	}
 	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, minBytes, 2000, time.Now())
 	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
@@ -630,7 +630,7 @@ func TestLatestTypeWithNoMsg(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -642,7 +642,7 @@ func TestLatestTypeWithNoMsg(t *testing.T) {
 	// offset fetch
 	listOffset := service.ListOffsetsPartitionReq{
 		Time:        constant.TimeLasted,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
@@ -687,7 +687,7 @@ func TestEarliestTypeWithNoMsg(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -699,7 +699,7 @@ func TestEarliestTypeWithNoMsg(t *testing.T) {
 	// offset fetch
 	listOffset := service.ListOffsetsPartitionReq{
 		Time:        constant.TimeEarliest,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
@@ -762,7 +762,7 @@ func TestMinBytesMsg(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -774,7 +774,7 @@ func TestMinBytesMsg(t *testing.T) {
 	// offset fetch
 	listOffset := service.ListOffsetsPartitionReq{
 		Time:        constant.TimeLasted,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
@@ -787,7 +787,7 @@ func TestMinBytesMsg(t *testing.T) {
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 	}
 	testMinBytes := 1
 	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, testMinBytes, 2000, time.Now())
@@ -848,7 +848,7 @@ func TestMaxBytesMsg(t *testing.T) {
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{
 		GroupId:     groupId,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
@@ -860,7 +860,7 @@ func TestMaxBytesMsg(t *testing.T) {
 	// offset fetch
 	listOffset := service.ListOffsetsPartitionReq{
 		Time:        constant.TimeEarliest,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 		PartitionId: partition,
 	}
 	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
@@ -873,7 +873,7 @@ func TestMaxBytesMsg(t *testing.T) {
 	fetchPartitionReq := service.FetchPartitionReq{
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
-		ClientId:    testClientId,
+		ClientId:    clientId,
 	}
 	testMinBytes := 1
 	maxBytes := 15
@@ -962,4 +962,119 @@ func TestMultiMemberLeaveGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, service.NONE, leaveGroupResp2.ErrorCode)
+}
+
+func TestFetchAfterDisConnect(t *testing.T) {
+	topic := uuid.New().String()
+	groupId := uuid.New().String()
+	pulsarTopic := utils.PartitionedTopic(defaultTopicType+topicPrefix+topic, partition)
+	setupPulsar()
+	k, err := kafsar.NewKafsar(kafsarServer, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := pulsar.ProducerMessage{Value: testContent}
+	messageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logrus.Infof("send msg to pulsar %s", messageId)
+
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
+
+	// join group
+	joinGroupReq := service.JoinGroupReq{
+		ClientId:       clientId,
+		GroupId:        groupId,
+		SessionTimeout: sessionTimeoutMs,
+		ProtocolType:   protocolType,
+		GroupProtocols: protocols,
+	}
+	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+
+	// offset fetch
+	offsetFetchReq := service.OffsetFetchPartitionReq{
+		GroupId:     groupId,
+		ClientId:    testClientId,
+		PartitionId: partition,
+	}
+	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
+
+	// fetch partition
+	fetchPartitionReq := service.FetchPartitionReq{
+		PartitionId: partition,
+		FetchOffset: offsetFetchPartitionResp.Offset,
+		ClientId:    testClientId,
+	}
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, minBytes, 2000, time.Now())
+	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
+	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
+	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
+	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
+	// offset commit
+	offsetCommitPartitionReq := service.OffsetCommitPartitionReq{
+		ClientId:           testClientId,
+		PartitionId:        partition,
+		OffsetCommitOffset: offset,
+	}
+	commitPartitionResp, err := k.OffsetCommitPartition(&addr, topic, &offsetCommitPartitionReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, commitPartitionResp.ErrorCode)
+	// acquire offset
+	time.Sleep(5 * time.Second)
+	acquireOffset, b := k.GetOffsetManager().AcquireOffset(username, topic, groupId, partition)
+	assert.True(t, b)
+	assert.Equal(t, acquireOffset.Offset, offset)
+	k.Disconnect(&addr)
+	time.Sleep(1 * time.Second)
+
+	message = pulsar.ProducerMessage{Value: testContent}
+	messageId, err = producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logrus.Infof("send msg to pulsar %s", messageId)
+
+	auth, errorCode = k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
+
+	joinGroupResp, err = k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+
+	offsetFetchPartitionResp, err = k.OffsetFetch(&addr, topic, &offsetFetchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
+
+	fetchPartitionResp = k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, minBytes, 2000, time.Now())
+	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
+	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
+	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 }

@@ -42,6 +42,7 @@ type KafkaImpl struct {
 	mutex            sync.RWMutex
 	userInfoManager  map[string]*userInfo
 	offsetManager    OffsetManager
+	memberManager    map[string]*MemberInfo
 }
 
 type userInfo struct {
@@ -52,6 +53,13 @@ type userInfo struct {
 type MessageIdPair struct {
 	MessageId pulsar.MessageID
 	Offset    int64
+}
+
+type MemberInfo struct {
+	memberId        string
+	groupId         string
+	groupInstanceId *string
+	clientId        string
 }
 
 func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
@@ -79,6 +87,7 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	}
 	kafka.readerManager = make(map[string]*ReaderMetadata)
 	kafka.userInfoManager = make(map[string]*userInfo)
+	kafka.memberManager = make(map[string]*MemberInfo)
 	return &kafka, nil
 }
 
@@ -132,7 +141,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 		}
 	}
 	k.mutex.RLock()
-	readerMetadata, exist := k.readerManager[partitionedTopic]
+	readerMetadata, exist := k.readerManager[partitionedTopic+req.ClientId]
 	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("can not find reader for topic: %s when fetch partition", partitionedTopic)
@@ -203,6 +212,15 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 			GenerationId: -1,
 		}, nil
 	}
+	memberInfo := MemberInfo{
+		memberId:        joinGroupResp.MemberId,
+		groupId:         req.GroupId,
+		groupInstanceId: req.GroupInstanceId,
+		clientId:        req.ClientId,
+	}
+	k.mutex.Lock()
+	k.memberManager[addr.String()] = &memberInfo
+	k.mutex.Unlock()
 	return joinGroupResp, nil
 }
 
@@ -222,10 +240,11 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	readerMetadata, exist := k.readerManager[group.partitionedTopic]
+	readerMetadata, exist := k.readerManager[group.partitionedTopic+req.ClientId]
 	if exist {
 		readerMetadata.reader.Close()
-		delete(k.readerManager, group.partitionedTopic)
+		logrus.Infof("success close reader topic: %s", group.partitionedTopic)
+		delete(k.readerManager, group.partitionedTopic+req.ClientId)
 		readerMetadata = nil
 	}
 	return leaveGroupResp, nil
@@ -260,7 +279,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 		}, nil
 	}
 	k.mutex.RLock()
-	readerMessages, exist := k.readerManager[partitionedTopic]
+	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
 	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset list failed, topic: %s, does not exist", partitionedTopic)
@@ -340,7 +359,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		}, nil
 	}
 	k.mutex.RLock()
-	readerMessages, exist := k.readerManager[partitionedTopic]
+	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
 	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("commit offset failed, topic: %s, does not exist", partitionedTopic)
@@ -403,7 +422,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		messageId = messagePair.MessageId
 	}
 	k.mutex.RLock()
-	consumerMetadata, exist := k.readerManager[partitionedTopic]
+	consumerMetadata, exist := k.readerManager[partitionedTopic+req.ClientId]
 	k.mutex.RUnlock()
 	if !exist {
 		k.mutex.Lock()
@@ -417,7 +436,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		}
 		metadata.reader = reader
 		metadata.channel = channel
-		k.readerManager[partitionedTopic] = &metadata
+		k.readerManager[partitionedTopic+req.ClientId] = &metadata
 		consumerMetadata = &metadata
 		k.mutex.Unlock()
 	}
@@ -520,7 +539,31 @@ func (k *KafkaImpl) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, co
 
 func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	logrus.Infof("lost connection: %s", addr)
+	if addr == nil {
+		return
+	}
 	delete(k.userInfoManager, addr.String())
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+	memberInfo, exist := k.memberManager[addr.String()]
+	if !exist {
+		return
+	}
+	memberList := []*service.LeaveGroupMember{
+		{
+			MemberId:        memberInfo.memberId,
+			GroupInstanceId: memberInfo.groupInstanceId,
+		},
+	}
+	req := service.LeaveGroupReq{
+		ClientId: memberInfo.clientId,
+		GroupId:  memberInfo.groupId,
+		Members:  memberList,
+	}
+	_, err := k.GroupLeave(addr, &req)
+	if err != nil {
+		logrus.Errorf("leave group failed. err: %s", err)
+	}
 }
 
 func (k *KafkaImpl) Close() {
