@@ -8,7 +8,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
-	github.com/paashzj/kafka_go v0.0.6-0.20220323071523-793836a79cd8
+	github.com/paashzj/kafka_go v0.0.6-0.20220325131530-db9b96acb586
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d
 	github.com/pkg/errors v0.9.1
 	github.com/segmentio/kafka-go v0.4.26
