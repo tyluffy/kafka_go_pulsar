@@ -19,10 +19,16 @@ package test
 
 import (
 	"bytes"
+	"github.com/apache/pulsar-client-go/pulsar"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
+)
+
+var (
+	PulsarHttpUrl = "http://localhost:8080"
+	PulsarTcpUrl  = "pulsar://localhost:6650"
 )
 
 var httpClient *http.Client
@@ -35,6 +41,14 @@ func init() {
 			DisableCompression: false,
 		},
 	}
+}
+
+func NewPulsarClient() pulsar.Client {
+	client, err := pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
+	if err != nil {
+		panic(err)
+	}
+	return client
 }
 
 func AcquireUnusedPort() (int, error) {

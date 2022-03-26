@@ -32,8 +32,10 @@ import (
 func TestOffsetManager(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
-	pulsarTopic := defaultTopicType + topicPrefix + topic
-	setupPulsar()
+	pulsarTopic := DefaultTopicType + TopicPrefix + topic
+	SetupPulsar()
+	pulsarClient := NewPulsarClient()
+	defer pulsarClient.Close()
 	manager, err := kafsar.NewOffsetManager(pulsarClient, kafsar.KafsarConfig{
 		PulsarTenant:    "public",
 		PulsarNamespace: "default",

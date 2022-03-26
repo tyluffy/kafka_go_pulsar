@@ -15,11 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package test
+package integrate
 
 import (
 	"context"
 	"fmt"
+	"github.com/paashzj/kafka_go_pulsar/pkg/test"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -27,8 +28,8 @@ import (
 )
 
 func TestKafkaConnect(t *testing.T) {
-	setupPulsar()
-	broker, port := setupKafsar()
+	test.SetupPulsar()
+	broker, port := test.SetupKafsar()
 	defer broker.Close()
 	time.Sleep(3 * time.Second)
 	topic := "my-topic"

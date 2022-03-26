@@ -18,9 +18,9 @@
 package test
 
 var (
-	subscriptionPrefix = "kafsar_sub_"
-	topicPrefix        = "kafsar_topic_"
-	defaultTopicType   = "persistent://public/default/"
+	SubscriptionPrefix = "kafsar_sub_"
+	TopicPrefix        = "kafsar_topic_"
+	DefaultTopicType   = "persistent://public/default/"
 )
 
 type KafsarImpl struct {
@@ -39,9 +39,9 @@ func (k KafsarImpl) AuthTopicGroup(username string, password, clientId, consumer
 }
 
 func (k KafsarImpl) SubscriptionName(groupId string) (string, error) {
-	return subscriptionPrefix + groupId, nil
+	return SubscriptionPrefix + groupId, nil
 }
 
 func (k KafsarImpl) PulsarTopic(username, topic string) (string, error) {
-	return defaultTopicType + topicPrefix + topic, nil
+	return DefaultTopicType + TopicPrefix + topic, nil
 }

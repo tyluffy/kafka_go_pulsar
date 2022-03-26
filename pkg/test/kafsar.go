@@ -22,7 +22,7 @@ import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
 )
 
-func setupKafsar() (*kafsar.Broker, int) {
+func SetupKafsar() (*kafsar.Broker, int) {
 	port, err := AcquireUnusedPort()
 	if err != nil {
 		panic(err)

@@ -35,7 +35,7 @@ const (
 )
 
 //nolint
-func setupPulsar() {
+func SetupPulsar() {
 	var once sync.Once
 	now := time.Now()
 	for {
