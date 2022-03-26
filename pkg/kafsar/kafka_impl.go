@@ -365,14 +365,15 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		logrus.Errorf("commit offset failed, topic: %s, does not exist", partitionedTopic)
 		return &service.OffsetCommitPartitionResp{ErrorCode: service.UNKNOWN_TOPIC_ID}, nil
 	}
-	ids := readerMessages.messageIds
-	front := ids.Front()
-	index := 0
-	for element := front; element != nil; element = element.Next() {
-		index++
-		messageIdPair := element.Value.(MessageIdPair)
+	length := readerMessages.messageIds.Len()
+	for i := 0; i < length; i++ {
+		front := readerMessages.messageIds.Front()
+		if front == nil {
+			break
+		}
+		messageIdPair := front.Value.(MessageIdPair)
 		// kafka commit offset maybe greater than current offset
-		if messageIdPair.Offset == req.OffsetCommitOffset || ((messageIdPair.Offset < req.OffsetCommitOffset) && (index == ids.Len())) {
+		if messageIdPair.Offset == req.OffsetCommitOffset || ((messageIdPair.Offset < req.OffsetCommitOffset) && (i == length-1)) {
 			err := k.offsetManager.CommitOffset(user.username, kafkaTopic, readerMessages.groupId, req.PartitionId, messageIdPair)
 			if err != nil {
 				logrus.Errorf("commit offset failed. topic: %s, err: %s", kafkaTopic, err)
@@ -386,7 +387,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 			break
 		}
 		logrus.Infof("ack pulsar %s for %s", partitionedTopic, messageIdPair.MessageId)
-		readerMessages.messageIds.Remove(element)
+		readerMessages.messageIds.Remove(front)
 	}
 	return &service.OffsetCommitPartitionResp{
 		PartitionId: req.PartitionId,
