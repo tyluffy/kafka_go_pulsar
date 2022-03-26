@@ -15,27 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package integrate
+package kafsar
 
-import (
-	"context"
-	"fmt"
-	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
-	"github.com/paashzj/kafka_go_pulsar/pkg/test"
-	"github.com/segmentio/kafka-go"
-	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
+import "github.com/paashzj/kafka_go/pkg/service"
+
+const (
+	clientId         = "test-client-id"
+	sessionTimeoutMs = 30000
+	protocolType     = "consumer"
 )
 
-func TestKafkaConnect(t *testing.T) {
-	test.SetupPulsar()
-	broker, port := kafsar.SetupKafsar()
-	defer broker.Close()
-	time.Sleep(3 * time.Second)
-	topic := "my-topic"
-	partition := 0
-	addr := fmt.Sprintf("localhost:%d", port)
-	_, err := kafka.DialLeader(context.Background(), "tcp", addr, topic, partition)
-	assert.Nil(t, err)
-}
+var (
+	protocol = service.GroupProtocol{
+		ProtocolName:     "range",
+		ProtocolMetadata: "000100000001000474657374ffffffff00000000",
+	}
+	groupProtocol []*service.GroupProtocol
+	protocols     = append(groupProtocol, &protocol)
+)

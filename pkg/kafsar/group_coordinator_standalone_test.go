@@ -25,18 +25,9 @@ import (
 )
 
 var (
-	clientId         = "consumer-a1e12365-ddfa-43fc-826e-9661fb54c274-1"
-	groupId          = "test-group-id"
-	memberId         = ""
-	sessionTimeoutMs = 30000
-	protocolType     = "consumer"
-	protocol         = service.GroupProtocol{
-		ProtocolName:     "range",
-		ProtocolMetadata: "000100000001000474657374ffffffff00000000",
-	}
-	groupProtocol []*service.GroupProtocol
-	protocols     = append(groupProtocol, &protocol)
-	generation    = 1
+	groupId    = "test-group-id"
+	memberId   = ""
+	generation = 1
 
 	kafsarConfig = KafsarConfig{
 		MaxConsumersPerGroup:     1,
@@ -110,7 +101,7 @@ func TestMultiMembersJoinSameGroup(t *testing.T) {
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 	assert.Equal(t, 1, len(groupCoordinator.groupManager))
 	assert.Equal(t, 2, len(group.members))
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 func TestGroupRebalance(t *testing.T) {

@@ -15,15 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package test
+package kafsar
 
 import (
 	"github.com/paashzj/kafka_go/pkg/kafka"
-	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
+	"github.com/paashzj/kafka_go_pulsar/pkg/test"
 )
 
-func SetupKafsar() (*kafsar.Broker, int) {
-	port, err := AcquireUnusedPort()
+func SetupKafsar() (*Broker, int) {
+	port, err := test.AcquireUnusedPort()
 	if err != nil {
 		panic(err)
 	}
@@ -34,14 +34,14 @@ func SetupKafsar() (*kafsar.Broker, int) {
 	return broker, port
 }
 
-func setupKafsarInternal(port int) (*kafsar.Broker, error) {
-	config := &kafsar.Config{}
+func setupKafsarInternal(port int) (*Broker, error) {
+	config := &Config{}
 	config.KafkaConfig = kafka.ServerConfig{}
 	config.KafkaConfig.ListenHost = "localhost"
 	config.KafkaConfig.ListenPort = port
 	config.KafkaConfig.AdvertiseHost = "localhost"
 	config.KafkaConfig.AdvertisePort = port
-	config.PulsarConfig = kafsar.PulsarConfig{}
+	config.PulsarConfig = PulsarConfig{}
 	config.PulsarConfig.Host = "localhost"
 	config.PulsarConfig.HttpPort = 8080
 	config.PulsarConfig.TcpPort = 6650
@@ -54,6 +54,6 @@ func setupKafsarInternal(port int) (*kafsar.Broker, error) {
 	config.KafsarConfig.PulsarTenant = "public"
 	config.KafsarConfig.PulsarNamespace = "default"
 	config.KafsarConfig.OffsetTopic = "kafka_offset"
-	kafsarImpl := &KafsarImpl{}
-	return kafsar.Run(config, kafsarImpl)
+	kafsarImpl := &test.KafsarImpl{}
+	return Run(config, kafsarImpl)
 }

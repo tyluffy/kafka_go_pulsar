@@ -34,9 +34,12 @@ const (
 	pulsarContainerName = "kafka-test-pulsar"
 )
 
+var (
+	once sync.Once
+)
+
 //nolint
 func SetupPulsar() {
-	var once sync.Once
 	now := time.Now()
 	for {
 		if time.Since(now).Minutes() > 3 {
@@ -103,7 +106,7 @@ func startPulsarInternal() error {
 				},
 			},
 		},
-	}, nil, nil, "kafka-test-pulsar")
+	}, nil, nil, pulsarContainerName)
 	if err != nil {
 		panic(err)
 	}

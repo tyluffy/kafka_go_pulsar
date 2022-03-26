@@ -15,13 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package test
+package kafsar
 
 import (
 	"context"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/google/uuid"
-	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
+	"github.com/paashzj/kafka_go_pulsar/pkg/test"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
@@ -30,13 +30,14 @@ import (
 )
 
 func TestOffsetManager(t *testing.T) {
+	testContent := uuid.New().String()
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
-	pulsarTopic := DefaultTopicType + TopicPrefix + topic
-	SetupPulsar()
-	pulsarClient := NewPulsarClient()
+	pulsarTopic := test.DefaultTopicType + test.TopicPrefix + topic
+	test.SetupPulsar()
+	pulsarClient := test.NewPulsarClient()
 	defer pulsarClient.Close()
-	manager, err := kafsar.NewOffsetManager(pulsarClient, kafsar.KafsarConfig{
+	manager, err := NewOffsetManager(pulsarClient, KafsarConfig{
 		PulsarTenant:    "public",
 		PulsarNamespace: "default",
 		OffsetTopic:     "kafka_offset",
@@ -65,26 +66,26 @@ func TestOffsetManager(t *testing.T) {
 	logrus.Infof("send msg to pulsar %s", messageId)
 	rand.Seed(time.Now().Unix())
 	offset := rand.Int63()
-	messagePair := kafsar.MessageIdPair{
+	messagePair := MessageIdPair{
 		MessageId: messageId,
 		Offset:    offset,
 	}
-	err = manager.CommitOffset(username, topic, groupId, partition, messagePair)
+	err = manager.CommitOffset("alice", topic, groupId, 0, messagePair)
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(3 * time.Second)
-	acquireOffset, flag := manager.AcquireOffset(username, topic, groupId, partition)
+	acquireOffset, flag := manager.AcquireOffset("alice", topic, groupId, 0)
 	if !flag {
 		t.Fatal("acquire offset not exists")
 	}
 	assert.Equal(t, acquireOffset.Offset, offset)
-	flag = manager.RemoveOffset(username, topic, groupId, partition)
+	flag = manager.RemoveOffset("alice", topic, groupId, 0)
 	if !flag {
 		t.Fatal("remove offset not exist")
 	}
 	time.Sleep(3 * time.Second)
-	acquireOffset, flag = manager.AcquireOffset(username, topic, groupId, partition)
+	acquireOffset, flag = manager.AcquireOffset("alice", topic, groupId, 0)
 	if flag {
 		t.Fatal("acquire offset exists")
 	}

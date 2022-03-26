@@ -28,8 +28,9 @@ import (
 )
 
 func TestReadEarliestMsg(t *testing.T) {
+	testContent := "test-content"
 	topic := uuid.New().String()
-	partitionedTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, partition)
+	partitionedTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, 0)
 	SetupPulsar()
 	pulsarClient := NewPulsarClient()
 	defer pulsarClient.Close()
@@ -43,8 +44,8 @@ func TestReadEarliestMsg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	readTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, partition)
-	msg, err := utils.ReadEarliestMsg(readTopic, maxFetchWaitMs, pulsarClient)
+	readTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, 0)
+	msg, err := utils.ReadEarliestMsg(readTopic, 2000, pulsarClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,8 +55,9 @@ func TestReadEarliestMsg(t *testing.T) {
 }
 
 func TestReadLatestMsg(t *testing.T) {
+	testContent := "test-content"
 	topic := uuid.New().String()
-	partitionedTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, partition)
+	partitionedTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, 0)
 	SetupPulsar()
 	pulsarClient := NewPulsarClient()
 	defer pulsarClient.Close()
@@ -87,13 +89,13 @@ func TestReadLatestMsg(t *testing.T) {
 		t.Fatal(err)
 	}
 	logrus.Infof("send msg to pulsar %s", messageId)
-	readPartitionedTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, partition)
+	readPartitionedTopic := utils.PartitionedTopic(DefaultTopicType+TopicPrefix+topic, 0)
 	msg, err := utils.GetLatestMsgId(readPartitionedTopic, PulsarHttpUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
 	logrus.Infof("msgId : %s", string(msg))
-	lastedMsg, err := utils.ReadLastedMsg(readPartitionedTopic, maxFetchWaitMs, msg, pulsarClient)
+	lastedMsg, err := utils.ReadLastedMsg(readPartitionedTopic, 2000, msg, pulsarClient)
 	if err != nil {
 		t.Fatal(err)
 	}
