@@ -3,7 +3,7 @@ module github.com/paashzj/kafka_go_pulsar
 go 1.18
 
 require (
-	github.com/apache/pulsar-client-go v0.8.1-0.20220322041514-b58f1157e4aa
+	github.com/apache/pulsar-client-go v0.8.1-0.20220329062248-925da1a039a9
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gogo/protobuf v1.3.2

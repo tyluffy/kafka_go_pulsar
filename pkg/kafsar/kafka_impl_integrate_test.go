@@ -144,7 +144,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Contains(t, string(request), "reader")
+	assert.Contains(t, string(request), groupId)
 }
 
 func TestFetchAndCommitOffset(t *testing.T) {

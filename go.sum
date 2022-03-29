@@ -112,8 +112,8 @@ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk5
 github.com/alexflint/go-filemutex v0.0.0-20171022225611-72bdc8eae2ae/go.mod h1:CgnQgUtFrFz9mxFNtED3jI5tLDjKlOM+oUF/sTk6ps0=
 github.com/alexflint/go-filemutex v1.1.0/go.mod h1:7P4iRhttt/nUvUOrYIhcpMzv2G6CY9UnI16Z+UJqRyk=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
-github.com/apache/pulsar-client-go v0.8.1-0.20220322041514-b58f1157e4aa h1:fJztCeleuqG4C0OnDISf1hgngLqkKp1mSyiPgOQb/dc=
-github.com/apache/pulsar-client-go v0.8.1-0.20220322041514-b58f1157e4aa/go.mod h1:BwEavf3Bej7UQ6KHhnIhVaPoCtIJOC7ti7M6CcYX904=
+github.com/apache/pulsar-client-go v0.8.1-0.20220329062248-925da1a039a9 h1:Ew4GStlnoMSOSz5s8iLxVjvMVYPatnbAFGQRA88He1w=
+github.com/apache/pulsar-client-go v0.8.1-0.20220329062248-925da1a039a9/go.mod h1:BwEavf3Bej7UQ6KHhnIhVaPoCtIJOC7ti7M6CcYX904=
 github.com/apache/pulsar-client-go/oauth2 v0.0.0-20220120090717-25e59572242e/go.mod h1:Xee4tgYLFpYcPMcTfBYWE1uKRzeciodGTSEDMzsR6i8=
 github.com/apache/pulsar-client-go/oauth2 v0.0.0-20220309072056-bb2fa811a0f5 h1:kys5toOIYBwreSQ6lA00R0gBHi/PunwlmIQfA+c6zeM=
 github.com/apache/pulsar-client-go/oauth2 v0.0.0-20220309072056-bb2fa811a0f5/go.mod h1:jNh1B7TOsQUighnc40UFOqbIv6Pcm0Tq9c+tmgylavU=

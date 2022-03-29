@@ -581,6 +581,7 @@ func (k *KafkaImpl) createReader(partitionedTopic string, subscriptionName strin
 	options := pulsar.ReaderOptions{
 		Topic:             partitionedTopic,
 		Name:              subscriptionName,
+		SubscriptionName:  subscriptionName,
 		StartMessageID:    messageId,
 		MessageChannel:    channel,
 		ReceiverQueueSize: k.kafsarConfig.ConsumerReceiveQueueSize,
