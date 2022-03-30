@@ -25,19 +25,25 @@ import (
 	"github.com/google/uuid"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/model"
+	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type OffsetManagerImpl struct {
-	producer  pulsar.Producer
-	consumer  pulsar.Consumer
-	offsetMap map[string]MessageIdPair
-	mutex     sync.RWMutex
+	producer       pulsar.Producer
+	consumer       pulsar.Consumer
+	offsetMap      map[string]MessageIdPair
+	mutex          sync.RWMutex
+	client         pulsar.Client
+	offsetTopic    string
+	pulsarHttpAddr string
+	startFlag      bool
 }
 
-func NewOffsetManager(client pulsar.Client, config KafsarConfig) (OffsetManager, error) {
+func NewOffsetManager(client pulsar.Client, config KafsarConfig, pulsarHttpAddr string) (OffsetManager, error) {
 	consumer, err := getOffsetConsumer(client, config)
 	if err != nil {
 		return nil, err
@@ -48,24 +54,43 @@ func NewOffsetManager(client pulsar.Client, config KafsarConfig) (OffsetManager,
 		return nil, err
 	}
 	impl := OffsetManagerImpl{
-		producer:  producer,
-		consumer:  consumer,
-		offsetMap: make(map[string]MessageIdPair),
+		producer:       producer,
+		consumer:       consumer,
+		client:         client,
+		offsetTopic:    getOffsetTopic(config),
+		pulsarHttpAddr: pulsarHttpAddr,
+		offsetMap:      make(map[string]MessageIdPair),
 	}
 	return &impl, nil
 }
 
-func (o *OffsetManagerImpl) Start() error {
-	o.startOffsetConsumer()
-	return nil
+func (o *OffsetManagerImpl) Start() chan bool {
+	offsetChannel := make(chan bool)
+	o.startOffsetConsumer(offsetChannel)
+	return offsetChannel
 }
 
-func (o *OffsetManagerImpl) startOffsetConsumer() {
+func (o *OffsetManagerImpl) startOffsetConsumer(c chan bool) {
 	go func() {
+		var msg pulsar.Message
+		for {
+			var err error
+			msg, err = o.getCurrentLatestMsg()
+			if err != nil {
+				continue
+			}
+			break
+		}
+		if msg == nil {
+			o.startFlag = true
+			c <- true
+		}
 		for receive := range o.consumer.Chan() {
 			logrus.Infof("receive key: %s, msg: %s", receive.Key(), string(receive.Payload()))
 			payload := receive.Payload()
+			publishTime := receive.PublishTime()
 			if len(payload) == 0 {
+				o.checkTime(msg, publishTime, c)
 				logrus.Errorf("payload length is 0. key: %s", receive.Key())
 				o.mutex.Lock()
 				delete(o.offsetMap, receive.Key())
@@ -75,12 +100,14 @@ func (o *OffsetManagerImpl) startOffsetConsumer() {
 			var msgIdData model.MessageIdData
 			err := json.Unmarshal(payload, &msgIdData)
 			if err != nil {
+				o.checkTime(msg, publishTime, c)
 				logrus.Errorf("unmarshal failed. key: %s, topic: %s", receive.Key(), receive.Topic())
 				continue
 			}
 			idData := msgIdData.MessageId
 			msgId, err := pulsar.DeserializeMessageID(idData)
 			if err != nil {
+				o.checkTime(msg, publishTime, c)
 				logrus.Errorf("deserialize message id failed. key: %s, err: %s", receive.Key(), err)
 				continue
 			}
@@ -92,12 +119,35 @@ func (o *OffsetManagerImpl) startOffsetConsumer() {
 			o.mutex.Lock()
 			o.offsetMap[receive.Key()] = pair
 			o.mutex.Unlock()
+			o.checkTime(msg, publishTime, c)
 		}
 	}()
 }
 
+func (o *OffsetManagerImpl) getCurrentLatestMsg() (pulsar.Message, error) {
+	partitionedTopic := o.offsetTopic + fmt.Sprintf(constant.PartitionSuffixFormat, 0)
+	msgByte, err := utils.GetLatestMsgId(partitionedTopic, o.pulsarHttpAddr)
+	if err != nil {
+		logrus.Errorf("get lasted msgId failed. err: %s", err)
+		return nil, err
+	}
+	msg, err := utils.ReadLastedMsg(partitionedTopic, 500, msgByte, o.client)
+	if err != nil {
+		logrus.Errorf("read Lasted Msg failed. err: %s", err)
+		return nil, err
+	}
+	return msg, nil
+}
+
+func (o *OffsetManagerImpl) checkTime(lastMsg pulsar.Message, currentTime time.Time, c chan bool) {
+	if lastMsg != nil && (currentTime.Equal(lastMsg.PublishTime()) || currentTime.After(lastMsg.PublishTime())) && !o.startFlag {
+		o.startFlag = true
+		c <- true
+	}
+}
+
 func (o *OffsetManagerImpl) CommitOffset(username, kafkaTopic, groupId string, partition int, pair MessageIdPair) error {
-	key := o.generateKey(username, kafkaTopic, groupId, partition)
+	key := o.GenerateKey(username, kafkaTopic, groupId, partition)
 	data := model.MessageIdData{}
 	data.MessageId = pair.MessageId.Serialize()
 	data.Offset = pair.Offset
@@ -119,7 +169,7 @@ func (o *OffsetManagerImpl) CommitOffset(username, kafkaTopic, groupId string, p
 }
 
 func (o *OffsetManagerImpl) AcquireOffset(username, kafkaTopic, groupId string, partition int) (MessageIdPair, bool) {
-	key := o.generateKey(username, kafkaTopic, groupId, partition)
+	key := o.GenerateKey(username, kafkaTopic, groupId, partition)
 	o.mutex.RLock()
 	pair, exist := o.offsetMap[key]
 	o.mutex.RUnlock()
@@ -127,7 +177,7 @@ func (o *OffsetManagerImpl) AcquireOffset(username, kafkaTopic, groupId string, 
 }
 
 func (o *OffsetManagerImpl) RemoveOffset(username, kafkaTopic, groupId string, partition int) bool {
-	key := o.generateKey(username, kafkaTopic, groupId, partition)
+	key := o.GenerateKey(username, kafkaTopic, groupId, partition)
 	logrus.Infof("begin remove offset key: %s", key)
 	message := pulsar.ProducerMessage{}
 	message.Key = key
@@ -145,7 +195,7 @@ func (o *OffsetManagerImpl) Close() {
 	o.consumer.Close()
 }
 
-func (o *OffsetManagerImpl) generateKey(username, kafkaTopic, groupId string, partition int) string {
+func (o *OffsetManagerImpl) GenerateKey(username, kafkaTopic, groupId string, partition int) string {
 	return username + kafkaTopic + groupId + strconv.Itoa(partition)
 }
 
@@ -154,10 +204,11 @@ func getOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consum
 	logrus.Infof("start offset consume subscribe name %s", subscribeName)
 	offsetTopic := getOffsetTopic(config)
 	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:            offsetTopic,
-		Type:             pulsar.Failover,
-		SubscriptionName: subscribeName,
-		ReadCompacted:    true,
+		Topic:                       offsetTopic,
+		Type:                        pulsar.Failover,
+		SubscriptionName:            subscribeName,
+		SubscriptionInitialPosition: pulsar.SubscriptionPositionEarliest,
+		ReadCompacted:               true,
 	})
 	if err != nil {
 		logrus.Errorf("subscribe reader failed. topic: %s, err: %s", offsetTopic, err)

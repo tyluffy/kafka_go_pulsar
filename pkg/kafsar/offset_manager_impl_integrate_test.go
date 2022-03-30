@@ -19,8 +19,10 @@ package kafsar
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/google/uuid"
+	"github.com/paashzj/kafka_go_pulsar/pkg/model"
 	"github.com/paashzj/kafka_go_pulsar/pkg/test"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +31,15 @@ import (
 	"time"
 )
 
-func TestOffsetManager(t *testing.T) {
+var (
+	testKafsarConfig = KafsarConfig{
+		PulsarTenant:    "public",
+		PulsarNamespace: "default",
+		OffsetTopic:     "kafka_offset",
+	}
+)
+
+func TestReadNewOffset(t *testing.T) {
 	testContent := uuid.New().String()
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
@@ -37,15 +47,17 @@ func TestOffsetManager(t *testing.T) {
 	test.SetupPulsar()
 	pulsarClient := test.NewPulsarClient()
 	defer pulsarClient.Close()
-	manager, err := NewOffsetManager(pulsarClient, KafsarConfig{
-		PulsarTenant:    "public",
-		PulsarNamespace: "default",
-		OffsetTopic:     "kafka_offset",
-	})
+
+	manager, err := NewOffsetManager(pulsarClient, testKafsarConfig, test.PulsarHttpUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = manager.Start()
+	offsetChannel := manager.Start()
+	for {
+		if <-offsetChannel {
+			break
+		}
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,4 +102,77 @@ func TestOffsetManager(t *testing.T) {
 		t.Fatal("acquire offset exists")
 	}
 	assert.Nil(t, acquireOffset.MessageId)
+}
+
+func TestReadOldOffset(t *testing.T) {
+	testContent := uuid.New().String()
+	topic := uuid.New().String()
+	groupId := uuid.New().String()
+	pulsarTopic := test.DefaultTopicType + test.TopicPrefix + topic
+	test.SetupPulsar()
+	pulsarClient := test.NewPulsarClient()
+	defer pulsarClient.Close()
+
+	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := pulsar.ProducerMessage{Value: testContent}
+	messageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logrus.Infof("send msg to pulsar %s", messageId)
+	rand.Seed(time.Now().Unix())
+	offset := rand.Int63()
+	messagePair := MessageIdPair{
+		MessageId: messageId,
+		Offset:    offset,
+	}
+
+	manager, err := NewOffsetManager(pulsarClient, testKafsarConfig, test.PulsarHttpUrl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key := manager.GenerateKey("alice", topic, groupId, partition)
+	data := model.MessageIdData{}
+	data.MessageId = messagePair.MessageId.Serialize()
+	data.Offset = messagePair.Offset
+	marshal, err := json.Marshal(data)
+	assert.Nil(t, err)
+	message = pulsar.ProducerMessage{}
+	message.Payload = marshal
+	message.Key = key
+
+	producer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: getOffsetTopic(testKafsarConfig)})
+	assert.Nil(t, err)
+
+	msgId, err := producer.Send(context.TODO(), &message)
+	assert.Nil(t, err)
+	logrus.Infof("send offset msg to pulsar %s", msgId)
+
+	offsetChannel := manager.Start()
+	for {
+		if <-offsetChannel {
+			break
+		}
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Close()
+
+	acquireOffset, flag := manager.AcquireOffset("alice", topic, groupId, 0)
+	if !flag {
+		t.Fatal("acquire offset not exists")
+	}
+	assert.Equal(t, acquireOffset.Offset, offset)
+	flag = manager.RemoveOffset("alice", topic, groupId, 0)
+	if !flag {
+		t.Fatal("remove offset not exist")
+	}
+	time.Sleep(3 * time.Second)
+	acquireOffset, flag = manager.AcquireOffset("alice", topic, groupId, 0)
+	assert.False(t, flag)
 }

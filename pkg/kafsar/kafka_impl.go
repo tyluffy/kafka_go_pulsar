@@ -70,13 +70,17 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	if err != nil {
 		return nil, err
 	}
-	kafka.offsetManager, err = NewOffsetManager(kafka.pulsarClient, config.KafsarConfig)
+	pulsarAddr := kafka.getPulsarHttpUrl()
+	kafka.offsetManager, err = NewOffsetManager(kafka.pulsarClient, config.KafsarConfig, pulsarAddr)
 	if err != nil {
 		kafka.pulsarClient.Close()
 	}
-	err = kafka.offsetManager.Start()
-	if err != nil {
-		kafka.pulsarClient.Close()
+
+	offsetChannel := kafka.offsetManager.Start()
+	for {
+		if <-offsetChannel {
+			break
+		}
 	}
 	if kafka.kafsarConfig.GroupCoordinatorType == Cluster {
 		kafka.groupCoordinator = NewGroupCoordinatorCluster()
