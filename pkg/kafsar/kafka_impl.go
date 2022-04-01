@@ -240,7 +240,7 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
 	user, exist := k.userInfoManager[addr.String()]
 	if !exist {
-		logrus.Errorf("username not found in join group: %s", req.GroupId)
+		logrus.Errorf("username not found in leave group: %s", req.GroupId)
 		return &service.LeaveGroupResp{
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
@@ -273,7 +273,7 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
 	user, exist := k.userInfoManager[addr.String()]
 	if !exist {
-		logrus.Errorf("username not found in join group: %s", req.GroupId)
+		logrus.Errorf("username not found in sync group: %s", req.GroupId)
 		return &service.SyncGroupResp{
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
@@ -570,11 +570,10 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	if addr == nil {
 		return
 	}
-	delete(k.userInfoManager, addr.String())
 	k.mutex.Lock()
-	defer k.mutex.Unlock()
 	memberInfo, exist := k.memberManager[addr.String()]
 	if !exist {
+		k.mutex.Unlock()
 		return
 	}
 	memberList := []*service.LeaveGroupMember{
@@ -592,6 +591,9 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	if err != nil {
 		logrus.Errorf("leave group failed. err: %s", err)
 	}
+	k.mutex.Unlock()
+	// leave group will use user information
+	delete(k.userInfoManager, addr.String())
 }
 
 func (k *KafkaImpl) Close() {
