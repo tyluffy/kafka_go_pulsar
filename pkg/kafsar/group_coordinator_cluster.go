@@ -28,24 +28,24 @@ func NewGroupCoordinatorCluster() *GroupCoordinatorCluster {
 	return &GroupCoordinatorCluster{}
 }
 
-func (gcc *GroupCoordinatorCluster) HandleJoinGroup(groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
+func (gcc *GroupCoordinatorCluster) HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
 	protocols []*service.GroupProtocol) (*service.JoinGroupResp, error) {
 	panic("implement handle join group")
 }
 
-func (gcc *GroupCoordinatorCluster) HandleSyncGroup(groupId, memberId string, generation int,
+func (gcc *GroupCoordinatorCluster) HandleSyncGroup(username, groupId, memberId string, generation int,
 	groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error) {
 	panic("implement handle sync group")
 }
 
-func (gcc *GroupCoordinatorCluster) HandleLeaveGroup(groupId string,
+func (gcc *GroupCoordinatorCluster) HandleLeaveGroup(username, groupId string,
 	members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error) {
 	panic("implement handle leave group")
 }
 
-func (gcc *GroupCoordinatorCluster) GetGroup(groupId string) (*Group, error) {
+func (gcc *GroupCoordinatorCluster) GetGroup(username, groupId string) (*Group, error) {
 	panic("implement get group")
 }
-func (gcc *GroupCoordinatorCluster) HandleHeartBeat(groupId string) *service.HeartBeatResp {
+func (gcc *GroupCoordinatorCluster) HandleHeartBeat(username, groupId string) *service.HeartBeatResp {
 	panic("implement handle heart beat")
 }

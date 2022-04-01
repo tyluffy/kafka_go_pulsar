@@ -41,7 +41,7 @@ func NewGroupCoordinatorStandalone(pulsarConfig PulsarConfig, kafsarConfig Kafsa
 	return &coordinatorImpl
 }
 
-func (g *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
+func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
 	protocols []*service.GroupProtocol) (*service.JoinGroupResp, error) {
 	// do parameters check
 	memberId, code, err := g.joinGroupParamsCheck(clientId, groupId, memberId, sessionTimeoutMs, g.kafsarConfig)
@@ -54,7 +54,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, clientId
 	}
 
 	g.mutex.Lock()
-	group, exist := g.groupManager[groupId]
+	group, exist := g.groupManager[username+groupId]
 	if !exist {
 		group = &Group{
 			groupId:          groupId,
@@ -64,7 +64,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, clientId
 			canRebalance:     true,
 			sessionTimeoutMs: sessionTimeoutMs,
 		}
-		g.groupManager[groupId] = group
+		g.groupManager[username+groupId] = group
 	}
 	g.mutex.Unlock()
 
@@ -202,7 +202,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(groupId, memberId, clientId
 	}, nil
 }
 
-func (g *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string, generation int,
+func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId string, generation int,
 	groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error) {
 	code, err := g.syncGroupParamsCheck(groupId, memberId)
 	if err != nil {
@@ -210,7 +210,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string, g
 		return &service.SyncGroupResp{ErrorCode: code}, nil
 	}
 	g.mutex.RLock()
-	group, exist := g.groupManager[groupId]
+	group, exist := g.groupManager[username+groupId]
 	g.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("sync group %s failed, cause invalid groupId", groupId)
@@ -280,7 +280,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(groupId, memberId string, g
 	}, nil
 }
 
-func (g *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
+func (g *GroupCoordinatorStandalone) HandleLeaveGroup(username, groupId string,
 	members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error) {
 	// reject if groupId is empty
 	if groupId == "" {
@@ -290,7 +290,7 @@ func (g *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 		}, nil
 	}
 	g.mutex.RLock()
-	group, exist := g.groupManager[groupId]
+	group, exist := g.groupManager[username+groupId]
 	g.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("leave group failed, cause group not exist")
@@ -314,9 +314,9 @@ func (g *GroupCoordinatorStandalone) HandleLeaveGroup(groupId string,
 	return &service.LeaveGroupResp{ErrorCode: service.NONE, Members: members}, nil
 }
 
-func (g *GroupCoordinatorStandalone) GetGroup(groupId string) (*Group, error) {
+func (g *GroupCoordinatorStandalone) GetGroup(username, groupId string) (*Group, error) {
 	g.mutex.RLock()
-	group, exist := g.groupManager[groupId]
+	group, exist := g.groupManager[username+groupId]
 	g.mutex.RUnlock()
 	if !exist {
 		return nil, errors.New("invalid groupId")
@@ -351,7 +351,7 @@ func (g *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clie
 	return g.doRebalance(group, rebalanceDelayMs)
 }
 
-func (g *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.HeartBeatResp {
+func (g *GroupCoordinatorStandalone) HandleHeartBeat(username, groupId string) *service.HeartBeatResp {
 	if groupId == "" {
 		logrus.Errorf("groupId is empty.")
 		return &service.HeartBeatResp{
@@ -359,7 +359,7 @@ func (g *GroupCoordinatorStandalone) HandleHeartBeat(groupId string) *service.He
 		}
 	}
 	g.mutex.RLock()
-	group, exist := g.groupManager[groupId]
+	group, exist := g.groupManager[username+groupId]
 	g.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("get group failed. cause group not exist, groupId: %s", groupId)
@@ -400,9 +400,9 @@ func (g *GroupCoordinatorStandalone) doRebalance(group *Group, rebalanceDelayMs 
 
 func (g *GroupCoordinatorStandalone) vote(group *Group, protocols []*service.GroupProtocol) {
 	// TODO make clear multiple protocol scene
-	g.mutex.Lock()
+	group.groupLock.Lock()
 	group.supportedProtocol = protocols[0].ProtocolName
-	g.mutex.Unlock()
+	group.groupLock.Unlock()
 }
 
 func (g *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, sessionTimeout int, waitForStatus GroupStatus) error {

@@ -205,8 +205,17 @@ OUT:
 }
 
 func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
+	user, exist := k.userInfoManager[addr.String()]
+	if !exist {
+		logrus.Errorf("username not found in join group: %s", req.GroupId)
+		return &service.JoinGroupResp{
+			ErrorCode:    service.UNKNOWN_SERVER_ERROR,
+			MemberId:     req.MemberId,
+			GenerationId: -1,
+		}, nil
+	}
 	logrus.Infof("%s joining to group: %s, memberId: %s", addr.String(), req.GroupId, req.MemberId)
-	joinGroupResp, err := k.groupCoordinator.HandleJoinGroup(req.GroupId, req.MemberId, req.ClientId, req.ProtocolType,
+	joinGroupResp, err := k.groupCoordinator.HandleJoinGroup(user.username, req.GroupId, req.MemberId, req.ClientId, req.ProtocolType,
 		req.SessionTimeout, req.GroupProtocols)
 	if err != nil {
 		logrus.Errorf("unexpected exception in join group: %s, error: %s", req.GroupId, err)
@@ -229,15 +238,22 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 }
 
 func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
+	user, exist := k.userInfoManager[addr.String()]
+	if !exist {
+		logrus.Errorf("username not found in join group: %s", req.GroupId)
+		return &service.LeaveGroupResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
 	logrus.Infof("%s leaving group: %s, members: %+v", addr.String(), req.GroupId, req.Members)
-	leaveGroupResp, err := k.groupCoordinator.HandleLeaveGroup(req.GroupId, req.Members)
+	leaveGroupResp, err := k.groupCoordinator.HandleLeaveGroup(user.username, req.GroupId, req.Members)
 	if err != nil {
 		logrus.Errorf("unexpected exception in leaving group: %s, error: %s", req.GroupId, err)
 		return &service.LeaveGroupResp{
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	group, err := k.groupCoordinator.GetGroup(req.GroupId)
+	group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
 	if err != nil {
 		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
 		return &service.LeaveGroupResp{
@@ -255,8 +271,15 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 }
 
 func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
+	user, exist := k.userInfoManager[addr.String()]
+	if !exist {
+		logrus.Errorf("username not found in join group: %s", req.GroupId)
+		return &service.SyncGroupResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}, nil
+	}
 	logrus.Infof("%s syncing group: %s, memberId: %s", addr.String(), req.GroupId, req.MemberId)
-	syncGroupResp, err := k.groupCoordinator.HandleSyncGroup(req.GroupId, req.MemberId, req.GenerationId, req.GroupAssignments)
+	syncGroupResp, err := k.groupCoordinator.HandleSyncGroup(user.username, req.GroupId, req.MemberId, req.GenerationId, req.GroupAssignments)
 	if err != nil {
 		logrus.Errorf("unexpected exception in sync group: %s, error: %s", req.GroupId, err)
 		return &service.SyncGroupResp{
@@ -445,7 +468,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		consumerMetadata = &metadata
 		k.mutex.Unlock()
 	}
-	group, err := k.groupCoordinator.GetGroup(req.GroupId)
+	group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
 	if err != nil {
 		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
 		return &service.OffsetFetchPartitionResp{
@@ -598,7 +621,14 @@ func (k *KafkaImpl) createReader(partitionedTopic string, subscriptionName strin
 }
 
 func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.HeartBeatResp {
-	return k.groupCoordinator.HandleHeartBeat(req.GroupId)
+	user, exist := k.userInfoManager[addr.String()]
+	if !exist {
+		logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
+		return &service.HeartBeatResp{
+			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+		}
+	}
+	return k.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
 }
 
 func (k *KafkaImpl) PartitionNum(kafkaTopic string) (int, error) {

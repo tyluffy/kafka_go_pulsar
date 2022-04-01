@@ -20,15 +20,15 @@ package kafsar
 import "github.com/paashzj/kafka_go/pkg/service"
 
 type GroupCoordinator interface {
-	HandleJoinGroup(groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
+	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
 		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
 
-	HandleSyncGroup(groupId, memberId string, generation int,
+	HandleSyncGroup(username, groupId, memberId string, generation int,
 		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
 
-	HandleLeaveGroup(groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
+	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
 
-	HandleHeartBeat(groupId string) *service.HeartBeatResp
+	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
 
-	GetGroup(groupId string) (*Group, error)
+	GetGroup(username, groupId string) (*Group, error)
 }
