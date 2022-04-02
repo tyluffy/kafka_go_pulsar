@@ -123,7 +123,9 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 
 // FetchPartition visible for testing
 func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	var records []*service.Record
 	recordBatch := service.RecordBatch{Records: records}
 	if !exist {
@@ -205,7 +207,9 @@ OUT:
 }
 
 func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("username not found in join group: %s", req.GroupId)
 		return &service.JoinGroupResp{
@@ -238,7 +242,9 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 }
 
 func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("username not found in leave group: %s", req.GroupId)
 		return &service.LeaveGroupResp{
@@ -271,7 +277,9 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 }
 
 func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("username not found in sync group: %s", req.GroupId)
 		return &service.SyncGroupResp{
@@ -290,7 +298,9 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 }
 
 func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.ListOffsetsPartitionResp{
@@ -368,7 +378,9 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 }
 
 func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset commit failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
@@ -423,7 +435,9 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 }
 
 func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.OffsetFetchPartitionReq) (*service.OffsetFetchPartitionResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetFetchPartitionResp{
@@ -496,7 +510,9 @@ func (k *KafkaImpl) partitionedTopic(user *userInfo, kafkaTopic string, partitio
 }
 
 func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.OffsetLeaderEpochPartitionReq) (*service.OffsetLeaderEpochPartitionResp, error) {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetLeaderEpochPartitionResp{
@@ -539,12 +555,16 @@ func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, service.
 	if err != nil || !auth {
 		return false, service.SASL_AUTHENTICATION_FAILED
 	}
+	k.mutex.RLock()
 	_, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
+		k.mutex.Lock()
 		k.userInfoManager[addr.String()] = &userInfo{
 			username: req.Username,
 			clientId: req.ClientId,
 		}
+		k.mutex.Unlock()
 	}
 	return true, service.NONE
 }
@@ -570,9 +590,12 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	if addr == nil {
 		return
 	}
-	k.mutex.Lock()
+	k.mutex.RLock()
 	memberInfo, exist := k.memberManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
+		k.mutex.Lock()
+		delete(k.userInfoManager, addr.String())
 		k.mutex.Unlock()
 		return
 	}
@@ -591,9 +614,10 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 	if err != nil {
 		logrus.Errorf("leave group failed. err: %s", err)
 	}
-	k.mutex.Unlock()
 	// leave group will use user information
+	k.mutex.Lock()
 	delete(k.userInfoManager, addr.String())
+	k.mutex.Unlock()
 }
 
 func (k *KafkaImpl) Close() {
@@ -623,7 +647,9 @@ func (k *KafkaImpl) createReader(partitionedTopic string, subscriptionName strin
 }
 
 func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.HeartBeatResp {
+	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
+	k.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
 		return &service.HeartBeatResp{
