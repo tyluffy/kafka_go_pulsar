@@ -11,7 +11,7 @@ require (
 	github.com/paashzj/kafka_go v0.0.6-0.20220325131530-db9b96acb586
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d
 	github.com/pkg/errors v0.9.1
-	github.com/segmentio/kafka-go v0.4.30
+	github.com/segmentio/kafka-go v0.4.31
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
 )
