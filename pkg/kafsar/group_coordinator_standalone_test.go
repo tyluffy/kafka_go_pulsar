@@ -67,6 +67,35 @@ func TestHandleJoinGroup(t *testing.T) {
 	assert.Equal(t, 2, len(groupCoordinator.groupManager))
 }
 
+func TestHandleJoinGroupWithMemberIdNotEmpty(t *testing.T) {
+	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
+	noEmptyMemberId := "test_no_empty_memberId"
+	resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, noEmptyMemberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, resp.ErrorCode)
+	assert.Equal(t, resp.ProtocolName, protocols[0].ProtocolName)
+	group, err := groupCoordinator.GetGroup(testUsername, groupId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, CompletingRebalance, group.groupStatus)
+
+	resp, err = groupCoordinator.HandleJoinGroup(testUsername, "test-group-id-2", noEmptyMemberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, resp.ErrorCode)
+	assert.Equal(t, resp.ProtocolName, protocols[0].ProtocolName)
+	group, err = groupCoordinator.GetGroup(testUsername, groupId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, CompletingRebalance, group.groupStatus)
+	assert.Equal(t, 2, len(groupCoordinator.groupManager))
+}
+
 func TestMultiMembersJoinSameGroup(t *testing.T) {
 	config := KafsarConfig{
 		MaxConsumersPerGroup:     10,

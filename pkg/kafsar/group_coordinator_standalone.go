@@ -98,8 +98,8 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 	}
 
 	if g.getGroupStatus(group) == PreparingRebalance {
-		if memberId == EmptyMemberId {
-			memberId, err = g.addMemberAndRebalance(group, clientId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
+		if memberId == EmptyMemberId || !g.checkMemberExist(group, memberId) {
+			memberId, err = g.addMemberAndRebalance(group, clientId, memberId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
@@ -129,8 +129,8 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 	}
 
 	if g.getGroupStatus(group) == CompletingRebalance {
-		if memberId == EmptyMemberId {
-			memberId, err = g.addMemberAndRebalance(group, clientId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
+		if memberId == EmptyMemberId || !g.checkMemberExist(group, memberId) {
+			memberId, err = g.addMemberAndRebalance(group, clientId, memberId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
@@ -164,8 +164,8 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 	}
 
 	if g.getGroupStatus(group) == Empty || g.getGroupStatus(group) == Stable {
-		if memberId == EmptyMemberId {
-			memberId, err = g.addMemberAndRebalance(group, clientId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
+		if memberId == EmptyMemberId || !g.checkMemberExist(group, memberId) {
+			memberId, err = g.addMemberAndRebalance(group, clientId, memberId, protocolType, protocols, g.kafsarConfig.InitialDelayedJoinMs)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &service.JoinGroupResp{
@@ -324,8 +324,10 @@ func (g *GroupCoordinatorStandalone) GetGroup(username, groupId string) (*Group,
 	return group, nil
 }
 
-func (g *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) (string, error) {
-	memberId := clientId + "-" + uuid.New().String()
+func (g *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientId, memberId, protocolType string, protocols []*service.GroupProtocol, rebalanceDelayMs int) (string, error) {
+	if memberId == EmptyMemberId {
+		memberId = clientId + "-" + uuid.New().String()
+	}
 	protocolMap := make(map[string]string)
 	for i := range protocols {
 		protocolMap[protocols[i].ProtocolName] = protocols[i].ProtocolMetadata
@@ -516,4 +518,9 @@ func (g *GroupCoordinatorStandalone) getLeaderMembers(group *Group, memberId str
 		}
 	}
 	return members
+}
+
+func (g *GroupCoordinatorStandalone) checkMemberExist(group *Group, memberId string) bool {
+	_, exist := group.members[memberId]
+	return exist
 }
