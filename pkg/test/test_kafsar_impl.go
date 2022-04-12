@@ -45,3 +45,7 @@ func (k KafsarImpl) SubscriptionName(groupId string) (string, error) {
 func (k KafsarImpl) PulsarTopic(username, topic string) (string, error) {
 	return DefaultTopicType + TopicPrefix + topic, nil
 }
+
+func (k KafsarImpl) PartitionNum(username, topic string) (int, error) {
+	return 1, nil
+}

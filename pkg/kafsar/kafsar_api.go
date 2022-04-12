@@ -28,4 +28,6 @@ type Server interface {
 
 	// PulsarTopic the corresponding topic in pulsar
 	PulsarTopic(username, topic string) (string, error)
+
+	PartitionNum(username, topic string) (int, error)
 }

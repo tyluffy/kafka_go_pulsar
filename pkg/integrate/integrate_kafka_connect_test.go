@@ -33,9 +33,7 @@ func TestKafkaConnect(t *testing.T) {
 	broker, port := kafsar.SetupKafsar()
 	defer broker.Close()
 	time.Sleep(3 * time.Second)
-	topic := "my-topic"
-	partition := 0
 	addr := fmt.Sprintf("localhost:%d", port)
-	_, err := kafka.DialLeader(context.Background(), "tcp", addr, topic, partition)
+	_, err := kafka.DialContext(context.Background(), "tcp", addr)
 	assert.Nil(t, err)
 }

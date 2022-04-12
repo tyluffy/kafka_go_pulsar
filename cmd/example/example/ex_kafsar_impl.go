@@ -39,3 +39,7 @@ func (e ExampleKafsarImpl) SubscriptionName(groupId string) (string, error) {
 func (e ExampleKafsarImpl) PulsarTopic(username, topic string) (string, error) {
 	return "persistent://public/default/" + topic, nil
 }
+
+func (e ExampleKafsarImpl) PartitionNum(username, topic string) (int, error) {
+	return 1, nil
+}

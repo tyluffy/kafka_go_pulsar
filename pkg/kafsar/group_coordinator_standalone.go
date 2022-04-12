@@ -63,6 +63,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			members:          make(map[string]*memberMetadata),
 			canRebalance:     true,
 			sessionTimeoutMs: sessionTimeoutMs,
+			partitionedTopic: make([]string, 0),
 		}
 		g.groupManager[username+groupId] = group
 	}

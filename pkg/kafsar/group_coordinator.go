@@ -25,14 +25,13 @@ import (
 
 type Group struct {
 	groupId           string
-	partitionedTopic  string
+	partitionedTopic  []string
 	groupStatus       GroupStatus
 	supportedProtocol string
 	groupProtocols    map[string]string
 	protocolType      string
 	leader            string
 	members           map[string]*memberMetadata
-	consumerMetadata  *ReaderMetadata
 	canRebalance      bool
 	generationId      int
 	groupLock         sync.RWMutex

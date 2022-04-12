@@ -751,8 +751,8 @@ github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xA
 github.com/opencontainers/selinux v1.10.0/go.mod h1:2i0OySw99QjzBBQByd1Gr9gSjvuho1lHsJxIJ3gGbJI=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
-github.com/paashzj/kafka_go v0.0.6-0.20220406032941-16f87ff0c8fb h1:UFBKH+5+jXdutLcwynlUP0EOBl1Autp0Ba3fWfQQg1g=
-github.com/paashzj/kafka_go v0.0.6-0.20220406032941-16f87ff0c8fb/go.mod h1:SU+D1npkJBf7+ismfLp1V5dbfDMNLdehQsfQdq+s8eA=
+github.com/paashzj/kafka_go v0.0.6-0.20220411062158-3c2c5cc274cf h1:vNt9WKfQpIaXi5MPbKPgdO0n9XxYHK9kg2gKIPYhUWo=
+github.com/paashzj/kafka_go v0.0.6-0.20220411062158-3c2c5cc274cf/go.mod h1:SU+D1npkJBf7+ismfLp1V5dbfDMNLdehQsfQdq+s8eA=
 github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d h1:dVFW4jCKOXuCsNNy0FDVfxuuyjfFhqDnJNNbY0MZwTM=
 github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d/go.mod h1:NsnM5j1wiMFSchSATQNKyCfk1W1+nFShd9ecAqTDto4=
 github.com/panjf2000/ants/v2 v2.4.7 h1:MZnw2JRyTJxFwtaMtUJcwE618wKD04POWk2gwwP4E2M=
