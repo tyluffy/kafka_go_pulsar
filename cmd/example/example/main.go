@@ -26,7 +26,7 @@ import (
 
 var listenHost = flag.String("kafka_listen_host", "0.0.0.0", "kafka listen host")
 var listenPort = flag.Int("kafka_listen_port", 9092, "kafka listen port")
-var multiCore = flag.Bool("kafka_multi_core", false, "multi core")
+var eventLoopNum = flag.Int("event_loop_num", 100, "multi core")
 var needSasl = flag.Bool("kafka_need_sasl", false, "need sasl")
 var maxConn = flag.Int("kafka_max_conn", 500, "need sasl")
 
@@ -43,7 +43,7 @@ func main() {
 	config := &kafsar.Config{}
 	config.KafkaConfig.ListenHost = *listenHost
 	config.KafkaConfig.ListenPort = *listenPort
-	config.KafkaConfig.MultiCore = *multiCore
+	config.KafkaConfig.EventLoopNum = *eventLoopNum
 	config.KafkaConfig.NeedSasl = *needSasl
 	config.KafkaConfig.ClusterId = *clusterId
 	config.KafkaConfig.AdvertiseHost = *advertiseListenAddr

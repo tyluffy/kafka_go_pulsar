@@ -45,6 +45,7 @@ type KafkaImpl struct {
 	userInfoManager    map[string]*userInfo
 	offsetManager      OffsetManager
 	memberManager      map[string]*MemberInfo
+	topicGroupManager  map[string]string
 }
 
 type userInfo struct {
@@ -96,6 +97,7 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	kafka.userInfoManager = make(map[string]*userInfo)
 	kafka.memberManager = make(map[string]*MemberInfo)
 	kafka.pulsarClientManage = make(map[string]pulsar.Client)
+	kafka.topicGroupManager = make(map[string]string)
 	return &kafka, nil
 }
 
@@ -152,8 +154,18 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 	}
 	k.mutex.RLock()
 	readerMetadata, exist := k.readerManager[partitionedTopic+req.ClientId]
-	k.mutex.RUnlock()
 	if !exist {
+		groupId, exist := k.topicGroupManager[partitionedTopic]
+		k.mutex.RUnlock()
+		if exist {
+			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
+			if err == nil && group.groupStatus != Stable {
+				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
+				return &service.FetchPartitionResp{
+					ErrorCode: service.REBALANCE_IN_PROGRESS,
+				}
+			}
+		}
 		logrus.Errorf("can not find reader for topic: %s when fetch partition", partitionedTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
@@ -161,6 +173,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 			RecordBatch: &recordBatch,
 		}
 	}
+	k.mutex.RUnlock()
 	byteLength := 0
 	var baseOffset int64
 	fistMessage := true
@@ -285,6 +298,7 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 			delete(k.pulsarClientManage, topic+req.ClientId)
 			client = nil
 		}
+		delete(k.topicGroupManager, topic)
 		k.mutex.Unlock()
 	}
 	return leaveGroupResp, nil
@@ -331,14 +345,23 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 	}
 	k.mutex.RLock()
 	client, exist := k.pulsarClientManage[partitionedTopic+req.ClientId]
-	k.mutex.RUnlock()
 	if !exist {
+		groupId, exist := k.topicGroupManager[partitionedTopic]
+		k.mutex.RUnlock()
+		if exist {
+			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
+			if err == nil && group.groupStatus != Stable {
+				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
+				return &service.ListOffsetsPartitionResp{
+					ErrorCode: service.REBALANCE_IN_PROGRESS,
+				}, nil
+			}
+		}
 		logrus.Errorf("get pulsar client failed. err: %s", err)
 		return &service.ListOffsetsPartitionResp{
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	k.mutex.RLock()
 	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
 	k.mutex.RUnlock()
 	if !exist {
@@ -423,11 +446,20 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 	}
 	k.mutex.RLock()
 	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
-	k.mutex.RUnlock()
 	if !exist {
+		groupId, exist := k.topicGroupManager[partitionedTopic]
+		k.mutex.RUnlock()
+		if exist {
+			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
+			if err == nil && group.groupStatus != Stable {
+				logrus.Warnf("group is preparing rebalance. groupId: %s, topic: %s", groupId, partitionedTopic)
+				return &service.OffsetCommitPartitionResp{ErrorCode: service.REBALANCE_IN_PROGRESS}, nil
+			}
+		}
 		logrus.Errorf("commit offset failed, topic: %s, does not exist", partitionedTopic)
 		return &service.OffsetCommitPartitionResp{ErrorCode: service.UNKNOWN_TOPIC_ID}, nil
 	}
+	k.mutex.RUnlock()
 	length := readerMessages.messageIds.Len()
 	for i := 0; i < length; i++ {
 		front := readerMessages.messageIds.Front()
@@ -518,6 +550,9 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if !k.checkPartitionTopicExist(group.partitionedTopic, partitionedTopic) {
 		group.partitionedTopic = append(group.partitionedTopic, partitionedTopic)
 	}
+	k.mutex.Lock()
+	k.topicGroupManager[partitionedTopic] = group.groupId
+	k.mutex.Unlock()
 
 	return &service.OffsetFetchPartitionResp{
 		PartitionId: req.PartitionId,
@@ -699,7 +734,32 @@ func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.
 			ErrorCode: service.UNKNOWN_SERVER_ERROR,
 		}
 	}
-	return k.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
+	resp := k.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
+	if resp.ErrorCode == service.REBALANCE_IN_PROGRESS {
+		group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
+		if err != nil {
+			logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
+			return resp
+		}
+		for _, topic := range group.partitionedTopic {
+			k.mutex.Lock()
+			readerMetadata, exist := k.readerManager[topic+req.ClientId]
+			if exist {
+				readerMetadata.reader.Close()
+				logrus.Infof("success close reader topic: %s", group.partitionedTopic)
+				delete(k.readerManager, topic+req.ClientId)
+				readerMetadata = nil
+			}
+			client, exist := k.pulsarClientManage[topic+req.ClientId]
+			if exist {
+				client.Close()
+				delete(k.pulsarClientManage, topic+req.ClientId)
+				client = nil
+			}
+			k.mutex.Unlock()
+		}
+	}
+	return resp
 }
 
 func (k *KafkaImpl) PartitionNum(addr net.Addr, kafkaTopic string) (int, error) {
