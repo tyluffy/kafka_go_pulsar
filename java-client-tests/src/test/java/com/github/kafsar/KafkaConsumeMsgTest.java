@@ -19,6 +19,7 @@
 
 package com.github.kafsar;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -44,7 +45,9 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -228,6 +231,165 @@ public class KafkaConsumeMsgTest extends BaseTest {
                 break;
             }
         }
+    }
+
+
+    @Test
+    @Timeout(60)
+    public void multiConsumerConsumeLatestWithDiffGroupIdTest() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        ProducerBuilder<String> producerBuilder = pulsarClient.newProducer(Schema.STRING).enableBatching(false);
+        Producer<String> producer = producerBuilder.topic(topic).create();
+        String msg = UUID.randomUUID().toString();
+        producer.send(msg + "1");
+        producer.send(msg + "2");
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_LATEST);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Consumer<String, String> consumer2 = new KafkaConsumer<>(props);
+
+        new Thread(() -> consumer1.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer2.subscribe(Collections.singletonList(topic))).start();
+
+        TimeUnit.SECONDS.sleep(5);
+
+        FutureTask<Boolean> futureTask1 = startPollMsg(consumer1, msg + "2");
+        FutureTask<Boolean> futureTask2 = startPollMsg(consumer1, msg + "2");
+
+        new Thread(futureTask1).start();
+        new Thread(futureTask2).start();
+
+        Assertions.assertTrue(futureTask1.get());
+        Assertions.assertTrue(futureTask2.get());
+    }
+
+    @Test
+    @Timeout(60)
+    public void multiConsumerConsumeEarliestWithDiffGroupIdTest() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        ProducerBuilder<String> producerBuilder = pulsarClient.newProducer(Schema.STRING).enableBatching(false);
+        Producer<String> producer = producerBuilder.topic(topic).create();
+        String msg = UUID.randomUUID().toString();
+        producer.send(msg + "1");
+        producer.send(msg + "2");
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_EARLIER);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Consumer<String, String> consumer2 = new KafkaConsumer<>(props);
+
+        new Thread(() -> consumer1.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer2.subscribe(Collections.singletonList(topic))).start();
+
+        TimeUnit.SECONDS.sleep(5);
+
+        FutureTask<Boolean> futureTask1 = startPollMsg(consumer1, msg + "1");
+        FutureTask<Boolean> futureTask2 = startPollMsg(consumer1, msg + "1");
+
+        new Thread(futureTask1).start();
+        new Thread(futureTask2).start();
+
+        Assertions.assertTrue(futureTask1.get());
+        Assertions.assertTrue(futureTask2.get());
+
+    }
+
+    @Test
+    @Timeout(60)
+    public void fiveConsumerConsumeEarliestWithDiffGroupIdTest() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        ProducerBuilder<String> producerBuilder = pulsarClient.newProducer(Schema.STRING).enableBatching(false);
+        Producer<String> producer = producerBuilder.topic(topic).create();
+        String msg = UUID.randomUUID().toString();
+        producer.send(msg + "1");
+        producer.send(msg + "2");
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_EARLIER);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Consumer<String, String> consumer2 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Consumer<String, String> consumer3 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Consumer<String, String> consumer4 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Consumer<String, String> consumer5 = new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+
+        new Thread(() -> consumer1.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer2.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer3.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer4.subscribe(Collections.singletonList(topic))).start();
+        new Thread(() -> consumer5.subscribe(Collections.singletonList(topic))).start();
+
+        TimeUnit.SECONDS.sleep(5);
+
+
+        FutureTask<Boolean> futureTask1 = startPollMsg(consumer1, msg + "1");
+        FutureTask<Boolean> futureTask2 = startPollMsg(consumer2, msg + "1");
+        FutureTask<Boolean> futureTask3 = startPollMsg(consumer3, msg + "1");
+        FutureTask<Boolean> futureTask4 = startPollMsg(consumer4, msg + "1");
+        FutureTask<Boolean> futureTask5 = startPollMsg(consumer5, msg + "1");
+
+        new Thread(futureTask1).start();
+        new Thread(futureTask2).start();
+        new Thread(futureTask3).start();
+        new Thread(futureTask4).start();
+        new Thread(futureTask5).start();
+
+        Assertions.assertTrue(futureTask1.get());
+        Assertions.assertTrue(futureTask2.get());
+        Assertions.assertTrue(futureTask3.get());
+        Assertions.assertTrue(futureTask4.get());
+        Assertions.assertTrue(futureTask5.get());
+    }
+
+    public FutureTask<Boolean> startPollMsg(Consumer<String,String> consumer, String msg) {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                while (true) {
+                    ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
+                    if (consumerRecords.isEmpty()) {
+                        TimeUnit.MILLISECONDS.sleep(200);
+                    } else {
+                        Assertions.assertEquals(msg, consumerRecords.iterator().next().value());
+                        return true;
+                    }
+                }
+            }
+        });
     }
 
 
