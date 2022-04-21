@@ -1083,3 +1083,92 @@ func TestFetchAfterDisConnect(t *testing.T) {
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 }
+
+func TestMsgWithFlowQuota(t *testing.T) {
+	topic := uuid.New().String()
+	groupId := uuid.New().String()
+	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
+	test.SetupPulsar()
+	k, err := NewKafsar(test.FlowKafsarImpl{}, MaxFetchConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pulsarClient := test.NewPulsarClient()
+	defer pulsarClient.Close()
+	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{Topic: pulsarTopic})
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := pulsar.ProducerMessage{Payload: []byte("testMsg1")}
+	earliestMessageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logrus.Infof("send msg to pulsar %s", earliestMessageId)
+
+	message = pulsar.ProducerMessage{Payload: []byte("TestMsg2")}
+	latestMessageId, err := producer.Send(context.TODO(), &message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logrus.Infof("send msg to pulsar %s", latestMessageId)
+	// sasl auth
+	saslReq := service.SaslReq{
+		Username: username,
+		Password: password,
+		ClientId: clientId,
+	}
+	auth, errorCode := k.SaslAuth(&addr, saslReq)
+	assert.Equal(t, service.NONE, errorCode)
+	assert.True(t, true, auth)
+
+	// join group
+	joinGroupReq := service.JoinGroupReq{
+		ClientId:       clientId,
+		GroupId:        groupId,
+		SessionTimeout: sessionTimeoutMs,
+		ProtocolType:   protocolType,
+		GroupProtocols: protocols,
+	}
+	joinGroupResp, err := k.GroupJoin(&addr, &joinGroupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+
+	// offset fetch
+	offsetFetchReq := service.OffsetFetchPartitionReq{
+		GroupId:     groupId,
+		ClientId:    clientId,
+		PartitionId: partition,
+	}
+	offsetFetchPartitionResp, err := k.OffsetFetch(&addr, topic, &offsetFetchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, int16(service.NONE), offsetFetchPartitionResp.ErrorCode)
+
+	// offset fetch
+	listOffset := service.ListOffsetsPartitionReq{
+		Time:        constant.TimeEarliest,
+		ClientId:    clientId,
+		PartitionId: partition,
+	}
+	listPartition, err := k.OffsetListPartition(&addr, topic, &listOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, service.NONE, listPartition.ErrorCode)
+
+	// fetch partition
+	fetchPartitionReq := service.FetchPartitionReq{
+		PartitionId: partition,
+		FetchOffset: offsetFetchPartitionResp.Offset,
+		ClientId:    clientId,
+	}
+	testMinBytes := 1
+	maxBytes := 15
+	fetchPartitionResp := k.FetchPartition(&addr, topic, &fetchPartitionReq, maxBytes, testMinBytes, 5000, time.Now())
+	assert.Equal(t, service.NONE, fetchPartitionResp.ErrorCode)
+	assert.Equal(t, 0, len(fetchPartitionResp.RecordBatch.Records))
+}

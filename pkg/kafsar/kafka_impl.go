@@ -184,6 +184,10 @@ OUT:
 		if time.Since(start).Milliseconds() >= int64(maxWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
 			break OUT
 		}
+		flowControl := k.server.HasFlowQuota(user.username, partitionedTopic)
+		if !flowControl {
+			continue
+		}
 		message, err := readerMetadata.reader.Next(ctx)
 		if err != nil {
 			logrus.Errorf("read msg failed. err: %s", err)

@@ -30,4 +30,6 @@ type Server interface {
 	PulsarTopic(username, topic string) (string, error)
 
 	PartitionNum(username, topic string) (int, error)
+
+	HasFlowQuota(username, topic string) bool
 }

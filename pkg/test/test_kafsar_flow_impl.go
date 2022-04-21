@@ -15,35 +15,35 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
+package test
 
-type ExampleKafsarImpl struct {
+type FlowKafsarImpl struct {
 }
 
-func (e ExampleKafsarImpl) Auth(username string, password string, clientId string) (bool, error) {
+func (k FlowKafsarImpl) Auth(username string, password string, clientId string) (bool, error) {
 	return true, nil
 }
 
-func (e ExampleKafsarImpl) AuthTopic(username string, password, clientId, topic, permissionType string) (bool, error) {
+func (k FlowKafsarImpl) AuthTopic(username string, password, clientId, topic, permissionType string) (bool, error) {
 	return true, nil
 }
 
-func (e ExampleKafsarImpl) AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error) {
+func (k FlowKafsarImpl) AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error) {
 	return true, nil
 }
 
-func (e ExampleKafsarImpl) SubscriptionName(groupId string) (string, error) {
-	return groupId, nil
+func (k FlowKafsarImpl) SubscriptionName(groupId string) (string, error) {
+	return SubscriptionPrefix + groupId, nil
 }
 
-func (e ExampleKafsarImpl) PulsarTopic(username, topic string) (string, error) {
-	return "persistent://public/default/" + topic, nil
+func (k FlowKafsarImpl) PulsarTopic(username, topic string) (string, error) {
+	return DefaultTopicType + TopicPrefix + topic, nil
 }
 
-func (e ExampleKafsarImpl) PartitionNum(username, topic string) (int, error) {
+func (k FlowKafsarImpl) PartitionNum(username, topic string) (int, error) {
 	return 1, nil
 }
 
-func (e ExampleKafsarImpl) HasFlowQuota(username, topic string) bool {
-	return true
+func (k FlowKafsarImpl) HasFlowQuota(username, topic string) bool {
+	return false
 }

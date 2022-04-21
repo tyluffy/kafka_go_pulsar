@@ -49,3 +49,7 @@ func (k KafsarImpl) PulsarTopic(username, topic string) (string, error) {
 func (k KafsarImpl) PartitionNum(username, topic string) (int, error) {
 	return 1, nil
 }
+
+func (k KafsarImpl) HasFlowQuota(username, topic string) bool {
+	return true
+}
