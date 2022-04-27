@@ -26,6 +26,7 @@ type Config struct {
 	KafkaConfig  kafka.ServerConfig
 	PulsarConfig PulsarConfig
 	KafsarConfig KafsarConfig
+	TraceConfig  TraceConfig
 }
 
 type PulsarConfig struct {
@@ -55,6 +56,13 @@ type KafsarConfig struct {
 	InitialDelayedJoinMs int
 	// RebalanceTickMs
 	RebalanceTickMs int
+}
+
+type TraceConfig struct {
+	DisableTracing bool
+	SkywalkingHost string
+	SkywalkingPort int
+	SampleRate     float64
 }
 
 type Broker struct {

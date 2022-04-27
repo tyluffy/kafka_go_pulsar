@@ -3,11 +3,13 @@ module github.com/paashzj/kafka_go_pulsar
 go 1.18
 
 require (
+	github.com/SkyAPM/go2sky v1.4.1
 	github.com/apache/pulsar-client-go v0.8.1-0.20220329062248-925da1a039a9
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/go-uuid v1.0.1
 	github.com/paashzj/kafka_go v0.0.6-0.20220418070224-b02e2f1f6c04
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d
 	github.com/pkg/errors v0.9.1
@@ -58,15 +60,17 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4 // indirect
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a // indirect
-	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86 // indirect
+	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220314164441-57ef72a4c106 // indirect
-	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/genproto v0.0.0-20220426171045-31bebdecfb46 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	skywalking.apache.org/repo/goapi v0.0.0-20220421134447-34b3d2780c61 // indirect
 )

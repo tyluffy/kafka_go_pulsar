@@ -46,6 +46,10 @@ type KafkaImpl struct {
 	offsetManager      OffsetManager
 	memberManager      map[string]*MemberInfo
 	topicGroupManager  map[string]string
+
+	// skywalking trace
+
+	tracer *NoErrorTracer
 }
 
 type userInfo struct {
@@ -98,6 +102,7 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	kafka.memberManager = make(map[string]*MemberInfo)
 	kafka.pulsarClientManage = make(map[string]pulsar.Client)
 	kafka.topicGroupManager = make(map[string]string)
+	kafka.tracer = NewTracer(config.TraceConfig)
 	return &kafka, nil
 }
 
