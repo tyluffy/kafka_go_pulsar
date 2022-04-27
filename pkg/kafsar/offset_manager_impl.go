@@ -111,7 +111,6 @@ func (o *OffsetManagerImpl) startOffsetConsumer(c chan bool) {
 				logrus.Errorf("deserialize message id failed. key: %s, err: %s", receive.Key(), err)
 				continue
 			}
-			logrus.Infof("received key %s offset %d", receive.Key(), msgIdData.Offset)
 			pair := MessageIdPair{
 				MessageId: msgId,
 				Offset:    msgIdData.Offset,

@@ -186,7 +186,7 @@ OUT:
 		}
 		flowControl := k.server.HasFlowQuota(user.username, partitionedTopic)
 		if !flowControl {
-			continue
+			break
 		}
 		message, err := readerMetadata.reader.Next(ctx)
 		if err != nil {
