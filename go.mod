@@ -13,7 +13,7 @@ require (
 	github.com/paashzj/kafka_go v0.0.6-0.20220418070224-b02e2f1f6c04
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220317131658-a079cc6af64d
 	github.com/pkg/errors v0.9.1
-	github.com/segmentio/kafka-go v0.4.31
+	github.com/segmentio/kafka-go v0.4.32
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
 )
@@ -76,7 +76,7 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 	skywalking.apache.org/repo/goapi v0.0.0-20220421134447-34b3d2780c61 // indirect
 )
