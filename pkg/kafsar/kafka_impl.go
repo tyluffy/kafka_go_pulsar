@@ -406,26 +406,6 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 			offset = convOffset(lastedMsg, k.kafsarConfig.ContinuousOffset)
 		}
 	}
-	if req.Time == constant.TimeEarliest {
-		message, err := utils.ReadEarliestMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, client)
-		if err != nil {
-			logrus.Errorf("read earliest msg failed. topic: %s, err: %s", kafkaTopic, err)
-			return &service.ListOffsetsPartitionResp{
-				ErrorCode: service.UNKNOWN_SERVER_ERROR,
-			}, nil
-		}
-		if message != nil {
-			logrus.Infof("seek offset. topic: %s", partitionedTopic)
-			err := readerMessages.reader.Seek(message.ID())
-			if err != nil {
-				logrus.Errorf("offset list failed, topic: %s, err: %s", partitionedTopic, err)
-				return &service.ListOffsetsPartitionResp{
-					ErrorCode: service.UNKNOWN_SERVER_ERROR,
-				}, nil
-			}
-			offset = convOffset(message, k.kafsarConfig.ContinuousOffset)
-		}
-	}
 	return &service.ListOffsetsPartitionResp{
 		PartitionId: req.PartitionId,
 		Offset:      offset,
