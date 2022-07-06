@@ -22,6 +22,9 @@ export PULSAR_ALLOW_AUTO_TOPIC_CREATION_TYPE=partitioned
 export PULSAR_BROKER_ENTRY_METADATA_INTERCEPTORS=org.apache.pulsar.common.intercept.AppendIndexMetadataInterceptor
 export PULSAR_EXPOSING_BROKER_ENTRY_METADATA_TO_CLIENT_ENABLED=true
 export REMOTE_MODE=false
-bash -vx /opt/sh/pulsar/mate/scripts/start-daemon.sh
+# generate config
+/opt/sh/pulsar/mate/config_gen
+# start pulsar standalone
+$PULSAR_HOME/bin/pulsar-daemon start standalone -nfw >>$PULSAR_HOME/pulsar.stdout.log 2>>$PULSAR_HOME/pulsar.stderr.log
 sleep 60
 /opt/sh/kafsar
