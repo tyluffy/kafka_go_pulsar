@@ -19,7 +19,7 @@
 
 FROM ttbb/compile:goc AS build
 COPY . /opt/sh/compile
-WORKDIR /opt/sh/compile/cmd/example/example
+WORKDIR /opt/sh/compile/cmd/it
 RUN go build -o kafsar .
 
 
@@ -27,6 +27,6 @@ FROM ttbb/pulsar:mate
 
 COPY docker-build/scripts /opt/sh/scripts
 
-COPY --from=build /opt/sh/compile/cmd/example/example/kafsar /opt/sh/kafsar
+COPY --from=build /opt/sh/compile/cmd/it/kafsar /opt/sh/kafsar
 
 CMD ["/usr/bin/dumb-init", "bash", "-vx", "/opt/sh/scripts/start.sh"]

@@ -38,8 +38,11 @@ jobs:
       - name: build image
         run: docker build . -t kafsar-unit-test
       - name: run kafsar
-        run: docker run -p 9092:9092 -p 6650:6650 -p 8080:8080 -d kafsar-unit-test
+        run: docker run --name kafsar -p 9092:9092 -p 6650:6650 -p 8080:8080 -d kafsar-unit-test
       - name: wait kafsar start
         run: sleep 30
       - name: run java client test
         run: cd java-client-tests; gradle clean test
+      - name: run on failure
+        if: ${{ failure() }}
+        run: docker logs kafsar
