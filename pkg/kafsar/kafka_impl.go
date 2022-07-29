@@ -117,7 +117,6 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 	} else {
 		maxWaitTime = k.kafsarConfig.MaxFetchWaitMs
 	}
-	fetchStart := time.Now()
 	reqList := req.FetchTopicReqList
 	result := make([]*service.FetchTopicResp, len(reqList))
 	for i, topicReq := range reqList {
@@ -125,7 +124,7 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 		f.Topic = topicReq.Topic
 		f.FetchPartitionRespList = make([]*service.FetchPartitionResp, len(topicReq.FetchPartitionReqList))
 		for j, partitionReq := range topicReq.FetchPartitionReqList {
-			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, req.MaxBytes, req.MinBytes, maxWaitTime, fetchStart)
+			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, req.MaxBytes, req.MinBytes, maxWaitTime/len(topicReq.FetchPartitionReqList))
 		}
 		result[i] = f
 	}
@@ -133,7 +132,8 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 }
 
 // FetchPartition visible for testing
-func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, start time.Time) *service.FetchPartitionResp {
+func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int) *service.FetchPartitionResp {
+	start := time.Now()
 	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
 	k.mutex.RUnlock()

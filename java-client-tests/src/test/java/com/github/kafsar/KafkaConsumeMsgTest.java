@@ -345,6 +345,45 @@ public class KafkaConsumeMsgTest extends BaseTest {
         }
     }
 
+    @Test
+    @Timeout(60)
+    public void ConsumeMsgWithMultiPartition() throws Exception {
+        String topic = UUID.randomUUID().toString();
+        pulsarAdmin.topics().createPartitionedTopic("public/default/" + topic, 3);
+        ProducerBuilder<String> producerBuilder = pulsarClient.newProducer(Schema.STRING).enableBatching(false);
+        Producer<String> producer = producerBuilder.topic(topic).create();
+        String msg = UUID.randomUUID().toString();
+        producer.send(msg + "0");
+        producer.send(msg + "1");
+        producer.send(msg + "2");
+        producer.send(msg + "3");
+        producer.send(msg + "4");
+        producer.send(msg + "5");
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConst.BROKERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaConst.OFFSET_RESET_EARLIER);
+
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+        props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        String saslJaasConfig = String.format("org.apache.kafka.common.security.plain.PlainLoginModule required \nusername=\"%s\" \npassword=\"%s\";", "alice", "pwd");
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+        Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
+        consumer1.subscribe(Collections.singletonList(topic));
+        TimeUnit.SECONDS.sleep(1);
+
+        while (true) {
+            ConsumerRecords<String, String> consumerRecords = consumer1.poll(Duration.ofSeconds(1));
+            if (consumerRecords.isEmpty()) {
+                continue;
+            }
+            Assertions.assertEquals(6, consumerRecords.count());
+            break;
+        }
+    }
+
     @AfterAll
     public void afterAll() throws PulsarClientException {
         super.close();

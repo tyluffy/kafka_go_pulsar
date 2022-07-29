@@ -17,6 +17,10 @@
 
 package main
 
+import "github.com/apache/pulsar-client-go/pulsar"
+
+var pulsarClient, _ = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
+
 type ItKafsaImpl struct {
 }
 
@@ -41,7 +45,15 @@ func (e ItKafsaImpl) PulsarTopic(username, topic string) (string, error) {
 }
 
 func (e ItKafsaImpl) PartitionNum(username, topic string) (int, error) {
-	return 1, nil
+	pulsarTopic, err := e.PulsarTopic(username, topic)
+	if err != nil {
+		return 0, err
+	}
+	partitions, err := pulsarClient.TopicPartitions(pulsarTopic)
+	if err != nil {
+		return 0, err
+	}
+	return len(partitions), nil
 }
 
 func (e ItKafsaImpl) HasFlowQuota(username, topic string) bool {
