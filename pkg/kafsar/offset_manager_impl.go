@@ -89,6 +89,8 @@ func (o *OffsetManagerImpl) startOffsetConsumer(c chan bool) {
 			logrus.Infof("receive key: %s, msg: %s", receive.Key(), string(receive.Payload()))
 			payload := receive.Payload()
 			publishTime := receive.PublishTime()
+			// At present, the three abnormal scenarios can be directly ack
+			receive.Ack(receive.Message)
 			if len(payload) == 0 {
 				o.checkTime(msg, publishTime, c)
 				logrus.Errorf("payload length is 0. key: %s", receive.Key())
