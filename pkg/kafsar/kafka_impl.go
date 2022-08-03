@@ -81,6 +81,7 @@ func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	kafka.offsetManager, err = NewOffsetManager(pulsarClient, config.KafsarConfig, pulsarAddr)
 	if err != nil {
 		pulsarClient.Close()
+		return nil, err
 	}
 
 	offsetChannel := kafka.offsetManager.Start()
@@ -195,6 +196,9 @@ OUT:
 		}
 		message, err := readerMetadata.reader.Next(ctx)
 		if err != nil {
+			if ctx.Err() != nil {
+				break OUT
+			}
 			logrus.Errorf("read msg failed. err: %s", err)
 			continue
 		}
