@@ -38,21 +38,23 @@ type NoErrorTracer struct {
 func NewTracer(config TraceConfig) *NoErrorTracer {
 	n := &NoErrorTracer{}
 	n.enableTrace = false
-	if !config.DisableTracing {
-		grpcReporter, err := reporter.NewGRPCReporter(net.JoinHostPort(config.SkywalkingHost, strconv.Itoa(config.SkywalkingPort)))
+	if config.SkywalkingHost == "" || config.SkywalkingPort == 0 || config.DisableTracing {
+		return n
+	}
+
+	grpcReporter, err := reporter.NewGRPCReporter(net.JoinHostPort(config.SkywalkingHost, strconv.Itoa(config.SkywalkingPort)))
+	if err != nil {
+		logrus.Error("skywalking init error, fall back to no trace")
+	} else {
+		name := instanceName()
+		logrus.Info("start skywalking with instance name ", name)
+		t, err := go2sky.NewTracer("mqtt_go_pulsar", go2sky.WithReporter(grpcReporter), go2sky.WithSampler(config.SampleRate), go2sky.WithInstance(name))
 		if err != nil {
 			logrus.Error("skywalking init error, fall back to no trace")
+			n.enableTrace = false
 		} else {
-			name := instanceName()
-			logrus.Info("start skywalking with instance name ", name)
-			t, err := go2sky.NewTracer("mqtt_go_pulsar", go2sky.WithReporter(grpcReporter), go2sky.WithSampler(config.SampleRate), go2sky.WithInstance(name))
-			if err != nil {
-				logrus.Error("skywalking init error, fall back to no trace")
-				n.enableTrace = false
-			} else {
-				n.tracer = t
-				n.enableTrace = true
-			}
+			n.tracer = t
+			n.enableTrace = true
 		}
 	}
 	return n
