@@ -10,7 +10,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/paashzj/kafka_go v0.0.6-0.20220418070224-b02e2f1f6c04
+	github.com/paashzj/kafka_go v0.0.6-0.20220803070639-e68501c3ee1d
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220701021847-fa4815b6469f
 	github.com/pkg/errors v0.9.1
 	github.com/segmentio/kafka-go v0.4.33
@@ -49,7 +49,7 @@ require (
 	github.com/onsi/gomega v1.15.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/panjf2000/gnet v1.6.4 // indirect
+	github.com/panjf2000/gnet v1.6.6 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
