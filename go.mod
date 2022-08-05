@@ -3,7 +3,7 @@ module github.com/paashzj/kafka_go_pulsar
 go 1.18
 
 require (
-	github.com/SkyAPM/go2sky v1.4.1
+	github.com/SkyAPM/go2sky v1.5.0
 	github.com/apache/pulsar-client-go v0.8.1-0.20220329062248-925da1a039a9
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/go-connections v0.4.0
