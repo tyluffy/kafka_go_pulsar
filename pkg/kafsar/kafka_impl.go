@@ -46,10 +46,7 @@ type KafkaImpl struct {
 	offsetManager      OffsetManager
 	memberManager      map[string]*MemberInfo
 	topicGroupManager  map[string]string
-
-	// skywalking trace
-
-	tracer *NoErrorTracer
+	tracer             *NoErrorTracer // skywalking tracer
 }
 
 type userInfo struct {
@@ -112,6 +109,9 @@ func (k *KafkaImpl) Produce(addr net.Addr, kafkaTopic string, partition int, req
 }
 
 func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.FetchTopicResp, error) {
+	traceSpan := k.tracer.CreateLocalLogSpan(context.Background())
+	k.tracer.SpanLog(traceSpan, "fetch action starting")
+
 	var maxWaitTime int
 	if req.MaxWaitTime < k.kafsarConfig.MaxFetchWaitMs {
 		maxWaitTime = req.MaxWaitTime
@@ -121,19 +121,29 @@ func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.Fetc
 	reqList := req.FetchTopicReqList
 	result := make([]*service.FetchTopicResp, len(reqList))
 	for i, topicReq := range reqList {
+		topicSpan := k.traceFetchLog(traceSpan, fmt.Sprintf(
+			"topic: %s fetching", topicReq.Topic), true, false)
 		f := &service.FetchTopicResp{}
 		f.Topic = topicReq.Topic
 		f.FetchPartitionRespList = make([]*service.FetchPartitionResp, len(topicReq.FetchPartitionReqList))
 		for j, partitionReq := range topicReq.FetchPartitionReqList {
-			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq, req.MaxBytes, req.MinBytes, maxWaitTime/len(topicReq.FetchPartitionReqList))
+			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq,
+				req.MaxBytes, req.MinBytes, maxWaitTime/len(topicReq.FetchPartitionReqList), topicSpan)
 		}
 		result[i] = f
+		k.traceFetchLog(topicSpan, fmt.Sprintf("topic: %s fetched", topicReq.Topic), false, true)
 	}
+	k.tracer.SpanLogWithClose(traceSpan, "fetch action done")
 	return result, nil
 }
 
 // FetchPartition visible for testing
-func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int) *service.FetchPartitionResp {
+func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, span TracerSpan) *service.FetchPartitionResp {
+	// open tracer, log
+	fetchSpan := k.traceFetchLog(span, fmt.Sprintf("fetching partition %s:%d",
+		kafkaTopic, req.PartitionId), true, false)
+	defer k.traceFetchLog(fetchSpan, fmt.Sprintf("fetched partition %s:%d",
+		kafkaTopic, req.PartitionId), false, true)
 	start := time.Now()
 	k.mutex.RLock()
 	user, exist := k.userInfoManager[addr.String()]
@@ -782,4 +792,40 @@ func (k *KafkaImpl) checkPartitionTopicExist(topics []string, partitionTopic str
 		}
 	}
 	return false
+}
+
+func (k *KafkaImpl) checkTracer() bool {
+	if k.tracer == nil {
+		return false
+	}
+	if !k.tracer.enableTrace {
+		return false
+	}
+	return true
+}
+
+// traceFetchLog trace fetch action, if isNewSpan == true, will create a new child span to log
+// if isClose == true, will close when span is written
+func (k *KafkaImpl) traceFetchLog(span TracerSpan, log string, isNewSpan, isClose bool) TracerSpan {
+	if !k.checkTracer() {
+		return span
+	}
+	if span.span == nil {
+		return span
+	}
+
+	var childSpan TracerSpan
+	if isNewSpan {
+		childSpan = k.tracer.CreateLocalLogSpan(span.ctx)
+	} else {
+		childSpan = span
+	}
+
+	if isClose {
+		k.tracer.SpanLogWithClose(childSpan, log)
+		return childSpan
+	}
+
+	k.tracer.SpanLog(childSpan, log)
+	return childSpan
 }

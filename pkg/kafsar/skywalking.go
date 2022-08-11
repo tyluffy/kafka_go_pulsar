@@ -28,6 +28,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 )
 
 type NoErrorTracer struct {
@@ -35,28 +36,33 @@ type NoErrorTracer struct {
 	tracer      *go2sky.Tracer
 }
 
+type TracerSpan struct {
+	span go2sky.Span
+	ctx  context.Context
+}
+
 func NewTracer(config TraceConfig) *NoErrorTracer {
 	n := &NoErrorTracer{}
-	n.enableTrace = false
 	if config.SkywalkingHost == "" || config.SkywalkingPort == 0 || config.DisableTracing {
 		return n
 	}
 
 	grpcReporter, err := reporter.NewGRPCReporter(net.JoinHostPort(config.SkywalkingHost, strconv.Itoa(config.SkywalkingPort)))
 	if err != nil {
-		logrus.Error("skywalking init error, fall back to no trace")
-	} else {
-		name := instanceName()
-		logrus.Info("start skywalking with instance name ", name)
-		t, err := go2sky.NewTracer("mqtt_go_pulsar", go2sky.WithReporter(grpcReporter), go2sky.WithSampler(config.SampleRate), go2sky.WithInstance(name))
-		if err != nil {
-			logrus.Error("skywalking init error, fall back to no trace")
-			n.enableTrace = false
-		} else {
-			n.tracer = t
-			n.enableTrace = true
-		}
+		logrus.Errorf("skywalking init error, fall back to no trace, error message: %s", err.Error())
+		return n
 	}
+
+	name := instanceName()
+	logrus.Infof("start skywalking with instance name %s", name)
+	t, err := go2sky.NewTracer("kafka_go_pulsar", go2sky.WithReporter(grpcReporter), go2sky.WithSampler(config.SampleRate), go2sky.WithInstance(name))
+	if err != nil {
+		logrus.Errorf("skywalking init error, fall back to no trace, error message: %s", err.Error())
+		return n
+	}
+
+	n.tracer = t
+	n.enableTrace = true
 	return n
 }
 
@@ -67,11 +73,45 @@ func (n *NoErrorTracer) CreateEntrySpan(ctx context.Context, operationName strin
 	return n.tracer.CreateEntrySpan(ctx, operationName, extractor)
 }
 
+// SpanLog write a log base exist span
+func (n *NoErrorTracer) SpanLog(span TracerSpan, log ...string) {
+	if !n.enableTrace {
+		return
+	}
+	if span.span == nil {
+		return
+	}
+	span.span.Log(time.Now(), log...)
+}
+
+// SpanLogWithClose write a log then close it
+func (n *NoErrorTracer) SpanLogWithClose(span TracerSpan, log ...string) {
+	if !n.enableTrace {
+		return
+	}
+	if span.span == nil {
+		return
+	}
+	span.span.Log(time.Now(), log...)
+	span.span.End()
+}
+
 func (n *NoErrorTracer) CreateLocalSpan(ctx context.Context) (go2sky.Span, context.Context, error) {
 	if !n.enableTrace {
 		return nil, nil, errors.New("disable tracing now")
 	}
 	return n.tracer.CreateLocalSpan(ctx)
+}
+
+func (n *NoErrorTracer) CreateLocalLogSpan(ctx context.Context) TracerSpan {
+	if !n.enableTrace {
+		return TracerSpan{}
+	}
+	span, newCtx, err := n.CreateLocalSpan(ctx)
+	if err != nil {
+		return TracerSpan{}
+	}
+	return TracerSpan{span: span, ctx: newCtx}
 }
 
 func instanceName() string {
