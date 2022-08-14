@@ -15,20 +15,44 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package service
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import (
+	"net"
+)
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
+type FetchReq struct {
+	MinBytes          int
+	MaxBytes          int
+	MaxWaitTime       int
+	FetchTopicReqList []*FetchTopicReq
+}
 
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
+type FetchTopicReq struct {
+	Topic                 string
+	FetchPartitionReqList []*FetchPartitionReq
+}
 
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
+type FetchTopicResp struct {
+	Topic                  string
+	FetchPartitionRespList []*FetchPartitionResp
+}
 
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
+type FetchPartitionReq struct {
+	PartitionId int
+	FetchOffset int64
+	ClientId    string
+}
 
-	GetGroup(username, groupId string) (*Group, error)
+type FetchPartitionResp struct {
+	ErrorCode        ErrorCode
+	PartitionId      int
+	HighWatermark    int64
+	LastStableOffset int64
+	LogStartOffset   int64
+	RecordBatch      *RecordBatch
+}
+
+func Fetch(addr net.Addr, impl KfkServer, req *FetchReq) ([]*FetchTopicResp, error) {
+	return impl.Fetch(addr, req)
 }

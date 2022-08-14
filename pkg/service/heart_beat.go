@@ -15,20 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package service
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+type HeartBeatReq struct {
+	GroupId         string
+	GenerationId    int
+	MemberId        string
+	GroupInstanceId *string
+	ClientId        string
+}
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
-
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
-
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
-
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
-
-	GetGroup(username, groupId string) (*Group, error)
+type HeartBeatResp struct {
+	ErrorCode ErrorCode
 }

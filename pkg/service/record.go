@@ -15,20 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package service
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+type RecordBatch struct {
+	Offset          int64
+	LastOffsetDelta int
+	FirstTimestamp  int64
+	LastTimestamp   int64
+	BaseSequence    int32
+	Records         []*Record
+}
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
-
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
-
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
-
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
-
-	GetGroup(username, groupId string) (*Group, error)
+type Record struct {
+	RelativeTimestamp int64
+	RelativeOffset    int
+	Key               []byte
+	Value             []byte
+	Headers           []byte
 }

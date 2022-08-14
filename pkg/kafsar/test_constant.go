@@ -17,7 +17,7 @@
 
 package kafsar
 
-import "github.com/paashzj/kafka_go/pkg/service"
+import "github.com/paashzj/kafka_go_pulsar/pkg/service"
 
 const (
 	clientId         = "test-client-id"

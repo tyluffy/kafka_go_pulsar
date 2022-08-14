@@ -15,20 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package service
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import "net"
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
+type SaslReq struct {
+	Username string
+	Password string
+	ClientId string
+}
 
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
-
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
-
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
-
-	GetGroup(username, groupId string) (*Group, error)
+func SaslAuth(addr net.Addr, impl KfkServer, req SaslReq) (bool, ErrorCode) {
+	return impl.SaslAuth(addr, req)
 }

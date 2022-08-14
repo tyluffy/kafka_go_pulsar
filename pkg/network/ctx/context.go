@@ -15,20 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package ctx
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import (
+	"net"
+	"sync"
+)
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
+// NetworkContext
+// authed 记录Kafka鉴权状态
+type NetworkContext struct {
+	ctxMutex sync.RWMutex
+	authed   bool
+	Addr     net.Addr
+}
 
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
+func (n *NetworkContext) Authed(authed bool) {
+	n.ctxMutex.RLock()
+	n.authed = authed
+	n.ctxMutex.RUnlock()
+}
 
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
-
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
-
-	GetGroup(username, groupId string) (*Group, error)
+func (n *NetworkContext) IsAuthed() bool {
+	n.ctxMutex.RLock()
+	defer n.ctxMutex.RUnlock()
+	return n.authed
 }

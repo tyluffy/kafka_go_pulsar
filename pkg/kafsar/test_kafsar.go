@@ -18,7 +18,7 @@
 package kafsar
 
 import (
-	"github.com/paashzj/kafka_go/pkg/kafka"
+	"github.com/paashzj/kafka_go_pulsar/pkg/kafka"
 	"github.com/paashzj/kafka_go_pulsar/pkg/test"
 )
 

@@ -10,9 +10,10 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/paashzj/kafka_go v0.0.6-0.20220814072102-37bcad21367f
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220701021847-fa4815b6469f
+	github.com/panjf2000/gnet v1.6.6
 	github.com/pkg/errors v0.9.1
+	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814105503-3db875a16e3f
 	github.com/segmentio/kafka-go v0.4.33
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
@@ -49,7 +50,6 @@ require (
 	github.com/onsi/gomega v1.15.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/panjf2000/gnet v1.6.6 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -57,7 +57,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814071343-7340aec688a5 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

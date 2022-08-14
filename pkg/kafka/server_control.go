@@ -15,20 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package kafka
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import (
+	"errors"
+	"github.com/paashzj/kafka_go_pulsar/pkg/network"
+	"github.com/panjf2000/gnet"
+	"net"
+)
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
+type ServerControl struct {
+	networkServer *network.Server
+}
 
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
-
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
-
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
-
-	GetGroup(username, groupId string) (*Group, error)
+func (s *ServerControl) DisConnect(addr net.Addr) error {
+	load, ok := s.networkServer.ConnMap.Load(addr)
+	if !ok {
+		return errors.New("no such addr connection")
+	}
+	conn := load.(gnet.Conn)
+	return conn.Close()
 }

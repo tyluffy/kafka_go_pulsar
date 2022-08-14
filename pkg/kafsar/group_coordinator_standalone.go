@@ -20,7 +20,7 @@ package kafsar
 import (
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/google/uuid"
-	"github.com/paashzj/kafka_go/pkg/service"
+	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"sync"

@@ -15,20 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package kafsar
+package network
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import (
+	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
+	"github.com/panjf2000/gnet"
+	"github.com/sirupsen/logrus"
+)
 
-type GroupCoordinator interface {
-	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
+func (s *Server) Authed(context *ctx.NetworkContext) bool {
+	if !s.kafkaProtocolConfig.NeedSasl {
+		return true
+	}
+	return context.IsAuthed()
+}
 
-	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
-
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
-
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
-
-	GetGroup(username, groupId string) (*Group, error)
+func (s *Server) AuthFailed() ([]byte, gnet.Action) {
+	logrus.Error("auth failed")
+	return nil, gnet.Close
 }

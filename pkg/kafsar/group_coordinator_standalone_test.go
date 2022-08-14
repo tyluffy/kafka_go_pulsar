@@ -18,7 +18,7 @@
 package kafsar
 
 import (
-	"github.com/paashzj/kafka_go/pkg/service"
+	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
