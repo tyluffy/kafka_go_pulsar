@@ -443,12 +443,6 @@ github.com/prometheus/procfs v0.1.3/go.mod h1:lV6e/gmhEcM9IjHGsFOCxxuZ+z1YqCvr4O
 github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0VU=
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814071343-7340aec688a5 h1:1HqshR89P/UCXB0mv1yEN14hdMrxE28XbykOsaLy2jw=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814071343-7340aec688a5/go.mod h1:OASNXti8Hh6Bv+xRz66ASWtXV0FjBPVDPgEqyHcren0=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814105503-3db875a16e3f h1:d4S5uB1sGzu7rgY7IxaTZ0azGLC00vUpwD18Zw5tytk=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814105503-3db875a16e3f/go.mod h1:ee9DQZroF7JJQGmlbbZcaKarE/1R6wloJyEMbReklYc=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814142616-f1ef31fdfde2 h1:2df3g/Hojsrn5ROvzoN6liLWvNYzHYJbW4IEL5BxrRQ=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814142616-f1ef31fdfde2/go.mod h1:ee9DQZroF7JJQGmlbbZcaKarE/1R6wloJyEMbReklYc=
 github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814154448-ca90567f2400 h1:Dy7gQvxWhOynxn93fQ+ETXvyzdEXeMNbVEzgGBOSwnM=
 github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814154448-ca90567f2400/go.mod h1:ee9DQZroF7JJQGmlbbZcaKarE/1R6wloJyEMbReklYc=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
@@ -456,8 +450,8 @@ github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
-github.com/segmentio/kafka-go v0.4.33 h1:XHYuEifMYFVCU9A2p1wJprd7xHQKS+Sn6xgBr11+30k=
-github.com/segmentio/kafka-go v0.4.33/go.mod h1:GAjxBQJdQMB5zfNA21AhpaqOB2Mu+w3De4ni3Gbm8y0=
+github.com/segmentio/kafka-go v0.4.34 h1:Dm6YlLMiVSiwwav20KY0AoY63s661FXevwJ3CVHUERo=
+github.com/segmentio/kafka-go v0.4.34/go.mod h1:GAjxBQJdQMB5zfNA21AhpaqOB2Mu+w3De4ni3Gbm8y0=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=

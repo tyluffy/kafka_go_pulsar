@@ -14,7 +14,7 @@ require (
 	github.com/panjf2000/gnet v1.6.6
 	github.com/pkg/errors v0.9.1
 	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220814154448-ca90567f2400
-	github.com/segmentio/kafka-go v0.4.33
+	github.com/segmentio/kafka-go v0.4.34
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 )
