@@ -41,17 +41,17 @@ var pulsarTcpPort = flag.Int("pulsar_tcp_port", 6650, "pulsar tcp port")
 func main() {
 	flag.Parse()
 	config := &kafsar.Config{}
-	config.KafkaConfig.ListenHost = *listenHost
-	config.KafkaConfig.ListenPort = *listenPort
-	config.KafkaConfig.EventLoopNum = *eventLoopNum
-	config.KafkaConfig.NeedSasl = *needSasl
-	config.KafkaConfig.ClusterId = *clusterId
-	config.KafkaConfig.AdvertiseHost = *advertiseListenAddr
-	config.KafkaConfig.AdvertisePort = *advertiseListenPort
-	config.KafkaConfig.MaxConn = int32(*maxConn)
 	config.PulsarConfig.Host = *pulsarHost
 	config.PulsarConfig.HttpPort = *pulsarHttpPort
 	config.PulsarConfig.TcpPort = *pulsarTcpPort
+	config.KafsarConfig.GnetConfig.ListenHost = *listenHost
+	config.KafsarConfig.GnetConfig.ListenPort = uint16(*listenPort)
+	config.KafsarConfig.GnetConfig.EventLoopNum = *eventLoopNum
+	config.KafsarConfig.NeedSasl = *needSasl
+	config.KafsarConfig.ClusterId = *clusterId
+	config.KafsarConfig.AdvertiseHost = *advertiseListenAddr
+	config.KafsarConfig.AdvertisePort = uint16(*advertiseListenPort)
+	config.KafsarConfig.MaxConn = int32(*maxConn)
 	config.KafsarConfig.MaxConsumersPerGroup = 1
 	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000
 	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
@@ -66,7 +66,8 @@ func main() {
 	config.KafsarConfig.InitialDelayedJoinMs = 3000
 	config.KafsarConfig.RebalanceTickMs = 100
 	e := &ExampleKafsarImpl{}
-	_, err := kafsar.Run(config, e)
+	server := kafsar.NewKafsarServer(config, e)
+	err := server.Run()
 	if err != nil {
 		panic(err)
 	}

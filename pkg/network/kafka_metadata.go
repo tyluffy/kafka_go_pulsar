@@ -49,24 +49,15 @@ func (s *Server) ReactMetadataVersion(ctx *ctx.NetworkContext, frame []byte, ver
 	var metadataResp *codec.MetadataResp
 	partitionNum, err := s.kafkaImpl.PartitionNum(ctx.Addr, topic)
 	if err != nil {
-		var partitionNum2 int = 0
 		metadataResp2 := codec.MetadataResp{}
 		metadataResp2.CorrelationId = metadataTopicReq.CorrelationId
 		metadataResp2.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp2.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil}
+		metadataResp2.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
 		metadataResp2.ClusterId = config.ClusterId
 		metadataResp2.ControllerId = config.NodeId
 		metadataResp2.TopicMetadataList = make([]*codec.TopicMetadata, 1)
 		topicMetadata := codec.TopicMetadata{ErrorCode: int16(service.UNKNOWN_SERVER_ERROR), Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
-		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, partitionNum2)
-		for i := 0; i < partitionNum2; i++ {
-			partitionMetadata := &codec.PartitionMetadata{ErrorCode: 0, PartitionId: i, LeaderId: config.NodeId, LeaderEpoch: 0, OfflineReplicas: nil}
-			replicas := make([]*codec.Replica, 1)
-			replicas[0] = &codec.Replica{ReplicaId: config.NodeId}
-			partitionMetadata.Replicas = replicas
-			partitionMetadata.CaughtReplicas = replicas
-			topicMetadata.PartitionMetadataList[i] = partitionMetadata
-		}
+		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
 		metadataResp2.TopicMetadataList[0] = &topicMetadata
 		metadataResp2.ClusterAuthorizedOperation = -2147483648
 		metadataResp = &metadataResp2
@@ -74,7 +65,7 @@ func (s *Server) ReactMetadataVersion(ctx *ctx.NetworkContext, frame []byte, ver
 		metadataResp2 := codec.MetadataResp{}
 		metadataResp2.CorrelationId = metadataTopicReq.CorrelationId
 		metadataResp2.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp2.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil}
+		metadataResp2.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
 		metadataResp2.ClusterId = config.ClusterId
 		metadataResp2.ControllerId = config.NodeId
 		metadataResp2.TopicMetadataList = make([]*codec.TopicMetadata, 1)

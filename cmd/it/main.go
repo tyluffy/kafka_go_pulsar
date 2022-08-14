@@ -20,24 +20,28 @@ package main
 import (
 	"flag"
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
+	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 	"os"
 	"os/signal"
 )
 
 func main() {
 	flag.Parse()
+	gnetConfig := kgnet.GnetConfig{
+		ListenHost:   "0.0.0.0",
+		ListenPort:   9092,
+		EventLoopNum: 100,
+	}
 	config := &kafsar.Config{}
-	config.KafkaConfig.ListenHost = "0.0.0.0"
-	config.KafkaConfig.ListenPort = 9092
-	config.KafkaConfig.EventLoopNum = 100
-	config.KafkaConfig.NeedSasl = false
-	config.KafkaConfig.ClusterId = "it_kafsar"
-	config.KafkaConfig.AdvertiseHost = "localhost"
-	config.KafkaConfig.AdvertisePort = 9092
-	config.KafkaConfig.MaxConn = int32(500)
 	config.PulsarConfig.Host = "localhost"
 	config.PulsarConfig.HttpPort = 8080
 	config.PulsarConfig.TcpPort = 6650
+	config.KafsarConfig.GnetConfig = gnetConfig
+	config.KafsarConfig.NeedSasl = false
+	config.KafsarConfig.ClusterId = "it_kafsar"
+	config.KafsarConfig.AdvertiseHost = "localhost"
+	config.KafsarConfig.AdvertisePort = 9092
+	config.KafsarConfig.MaxConn = int32(500)
 	config.KafsarConfig.MaxConsumersPerGroup = 1
 	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000
 	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
@@ -53,7 +57,8 @@ func main() {
 	config.KafsarConfig.RebalanceTickMs = 100
 	config.TraceConfig.DisableTracing = true
 	e := &ItKafsaImpl{}
-	_, err := kafsar.Run(config, e)
+	server := kafsar.NewKafsarServer(config, e)
+	err := server.Run()
 	if err != nil {
 		panic(err)
 	}

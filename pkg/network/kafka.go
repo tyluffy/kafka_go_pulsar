@@ -25,6 +25,7 @@ import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
+	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 	"github.com/sirupsen/logrus"
 	"runtime/debug"
 	"sync"
@@ -36,15 +37,9 @@ var connCount int32
 
 var connMutex sync.Mutex
 
-var serverConfig *Config
+var serverConfig *kgnet.GnetConfig
 
-type Config struct {
-	ListenHost   string
-	ListenPort   int
-	EventLoopNum int
-}
-
-func Run(config *Config, kfkProtocolConfig *KafkaProtocolConfig, impl service.KfkServer) (*Server, error) {
+func Run(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl service.KfkServer) (*Server, error) {
 	serverConfig = config
 	server := &Server{
 		EventServer:         nil,

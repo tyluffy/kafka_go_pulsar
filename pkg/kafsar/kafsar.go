@@ -18,12 +18,13 @@
 package kafsar
 
 import (
-	"github.com/paashzj/kafka_go_pulsar/pkg/kafka"
+	"github.com/paashzj/kafka_go_pulsar/pkg/network"
+	"github.com/paashzj/kafka_go_pulsar/pkg/service"
+	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
-	KafkaConfig  kafka.ServerConfig
 	PulsarConfig PulsarConfig
 	KafsarConfig KafsarConfig
 	TraceConfig  TraceConfig
@@ -36,6 +37,16 @@ type PulsarConfig struct {
 }
 
 type KafsarConfig struct {
+	// network config
+	GnetConfig kgnet.GnetConfig
+	NeedSasl   bool
+	MaxConn    int32
+
+	// Kafka protocol config
+	ClusterId     string
+	AdvertiseHost string
+	AdvertisePort uint16
+
 	MaxConsumersPerGroup     int
 	GroupMinSessionTimeoutMs int
 	GroupMaxSessionTimeoutMs int
@@ -66,23 +77,45 @@ type TraceConfig struct {
 }
 
 type Broker struct {
-	impl *KafkaImpl
+	Config *Config
+	aux    Server
+	impl   *KafkaImpl
 }
 
 func (b *Broker) Close() {
 	b.impl.Close()
 }
 
-func Run(config *Config, impl Server) (*Broker, error) {
+func (b *Broker) Run() error {
 	logrus.Info("kafsar started")
-	k, err := NewKafsar(impl, config)
+	k, err := newKafsar(b.aux, b.Config)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	_, err = kafka.Run(&config.KafkaConfig, k)
+	_, err = b.runKafka(&b.Config.KafsarConfig, k)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	broker := &Broker{impl: k}
-	return broker, nil
+	b.impl = k
+	return nil
+}
+
+func (b *Broker) runKafka(config *KafsarConfig, impl service.KfkServer) (*ServerControl, error) {
+	kfkProtocolConfig := &network.KafkaProtocolConfig{}
+	kfkProtocolConfig.ClusterId = config.ClusterId
+	kfkProtocolConfig.AdvertiseHost = config.AdvertiseHost
+	kfkProtocolConfig.AdvertisePort = config.AdvertisePort
+	kfkProtocolConfig.NeedSasl = config.NeedSasl
+	kfkProtocolConfig.MaxConn = config.MaxConn
+	serverControl := &ServerControl{}
+	var err error
+	serverControl.networkServer, err = network.Run(&config.GnetConfig, kfkProtocolConfig, impl)
+	return serverControl, err
+}
+
+func NewKafsarServer(config *Config, impl Server) *Broker {
+	return &Broker{
+		Config: config,
+		aux:    impl,
+	}
 }

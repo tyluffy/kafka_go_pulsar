@@ -44,7 +44,7 @@ func (s *Server) FindCoordinatorVersion(frame []byte, version int16, config *Kaf
 		},
 		NodeId: config.NodeId,
 		Host:   config.AdvertiseHost,
-		Port:   config.AdvertisePort,
+		Port:   int(config.AdvertisePort),
 	}
 	logrus.Debug("resp ", resp)
 	return resp.Bytes(version), gnet.None

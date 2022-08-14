@@ -66,7 +66,7 @@ type MemberInfo struct {
 	clientId        string
 }
 
-func NewKafsar(impl Server, config *Config) (*KafkaImpl, error) {
+func newKafsar(impl Server, config *Config) (*KafkaImpl, error) {
 	kafka := KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
 	pulsarUrl := fmt.Sprintf("pulsar://%s:%d", kafka.pulsarConfig.Host, kafka.pulsarConfig.TcpPort)
 	var err error

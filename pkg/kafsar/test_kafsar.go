@@ -18,11 +18,11 @@
 package kafsar
 
 import (
-	"github.com/paashzj/kafka_go_pulsar/pkg/kafka"
 	"github.com/paashzj/kafka_go_pulsar/pkg/test"
+	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 )
 
-func SetupKafsar() (*Broker, int) {
+func SetupKafsar() (*Broker, uint16) {
 	port, err := test.AcquireUnusedPort()
 	if err != nil {
 		panic(err)
@@ -34,17 +34,19 @@ func SetupKafsar() (*Broker, int) {
 	return broker, port
 }
 
-func setupKafsarInternal(port int) (*Broker, error) {
+func setupKafsarInternal(port uint16) (*Broker, error) {
 	config := &Config{}
-	config.KafkaConfig = kafka.ServerConfig{}
-	config.KafkaConfig.ListenHost = "localhost"
-	config.KafkaConfig.ListenPort = port
-	config.KafkaConfig.AdvertiseHost = "localhost"
-	config.KafkaConfig.AdvertisePort = port
+	gnetConfig := kgnet.GnetConfig{
+		ListenHost: "localhost",
+		ListenPort: port,
+	}
 	config.PulsarConfig = PulsarConfig{}
 	config.PulsarConfig.Host = "localhost"
 	config.PulsarConfig.HttpPort = 8080
 	config.PulsarConfig.TcpPort = 6650
+	config.KafsarConfig.GnetConfig = gnetConfig
+	config.KafsarConfig.AdvertiseHost = "localhost"
+	config.KafsarConfig.AdvertisePort = port
 	config.KafsarConfig.MaxConsumersPerGroup = 100
 	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000
 	config.KafsarConfig.GroupMinSessionTimeoutMs = 0
@@ -55,5 +57,6 @@ func setupKafsarInternal(port int) (*Broker, error) {
 	config.KafsarConfig.PulsarNamespace = "default"
 	config.KafsarConfig.OffsetTopic = "kafka_offset"
 	kafsarImpl := &test.KafsarImpl{}
-	return Run(config, kafsarImpl)
+	server := NewKafsarServer(config, kafsarImpl)
+	return server, server.Run()
 }
