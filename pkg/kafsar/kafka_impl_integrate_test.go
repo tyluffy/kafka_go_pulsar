@@ -917,20 +917,52 @@ func TestMultiMemberLeaveGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, service.NONE, joinGroupResp.ErrorCode)
+	// sync group
+	groupAssignments := make([]*service.GroupAssignment, 1)
+	g := &service.GroupAssignment{}
+	g.MemberId = joinGroupResp.MemberId
+	g.MemberAssignment = "testAssignment: " + joinGroupResp.MemberId
+	groupAssignments[0] = g
 
-	// join group
-	joinGroupReq = service.JoinGroupReq{
+	syncReq := service.SyncGroupReq{
+		ClientId:         clientId,
+		GroupId:          groupId,
+		GenerationId:     joinGroupResp.GenerationId,
+		MemberId:         joinGroupResp.MemberId,
+		GroupAssignments: groupAssignments,
+	}
+	_, err = k.GroupSync(&addr, &syncReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// other join group
+	go func() {
+		joinGroupReq2 := service.JoinGroupReq{
+			ClientId:       clientId,
+			GroupId:        groupId,
+			SessionTimeout: sessionTimeoutMs,
+			ProtocolType:   protocolType,
+			GroupProtocols: protocols,
+		}
+		joinGroupResp2, err := k.GroupJoin(&addr, &joinGroupReq2)
+		assert.Nil(t, err)
+		assert.Equal(t, service.NONE, joinGroupResp2.ErrorCode)
+	}()
+
+	// the first one join
+	joinGroupReq3 := service.JoinGroupReq{
 		ClientId:       clientId,
 		GroupId:        groupId,
 		SessionTimeout: sessionTimeoutMs,
 		ProtocolType:   protocolType,
 		GroupProtocols: protocols,
+		MemberId:       joinGroupResp.MemberId,
 	}
-	joinGroupResp2, err := k.GroupJoin(&addr, &joinGroupReq)
+	_, err = k.GroupJoin(&addr, &joinGroupReq3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, service.NONE, joinGroupResp2.ErrorCode)
 
 	// offset fetch
 	offsetFetchReq := service.OffsetFetchPartitionReq{

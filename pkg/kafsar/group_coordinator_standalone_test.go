@@ -20,6 +20,7 @@ package kafsar
 import (
 	"github.com/paashzj/kafka_go/pkg/service"
 	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
 	"time"
 )
@@ -96,7 +97,7 @@ func TestHandleJoinGroupWithMemberIdNotEmpty(t *testing.T) {
 	assert.Equal(t, 2, len(groupCoordinator.groupManager))
 }
 
-func TestMultiMembersJoinSameGroup(t *testing.T) {
+func TestNotifyReJoinGroup(t *testing.T) {
 	config := KafsarConfig{
 		MaxConsumersPerGroup:     10,
 		GroupMinSessionTimeoutMs: 0,
@@ -121,11 +122,46 @@ func TestMultiMembersJoinSameGroup(t *testing.T) {
 		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
 		assert.Equal(t, service.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
 	}()
-	resp2, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+
+	// leader sync
+	members := group.members
+	groupAssignments := make([]*service.GroupAssignment, len(members))
+	i := 0
+	for memberId := range members {
+		g := &service.GroupAssignment{}
+		g.MemberId = memberId
+		groupAssignments[i] = g
+		i++
+	}
+	syncGroupResp, err := groupCoordinator.HandleSyncGroup(testUsername, groupId, group.leader, group.generationId, groupAssignments)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, service.NONE, resp2.ErrorCode)
+	assert.Equal(t, service.NONE, syncGroupResp.ErrorCode)
+	assert.Equal(t, Stable, group.groupStatus)
+
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(2)
+	go func() {
+		// other member join
+		resp2, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+		assert.Nil(t, err)
+		assert.Equal(t, service.NONE, resp2.ErrorCode)
+		waitGroup.Done()
+	}()
+	go func() {
+		// leader heartbeat
+		time.Sleep(3500 * time.Millisecond)
+		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+		assert.Equal(t, service.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
+		// leader join
+		resp3, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, group.leader, clientId, protocolType, sessionTimeoutMs, protocols)
+		assert.Nil(t, err)
+		assert.Equal(t, service.NONE, resp3.ErrorCode)
+		waitGroup.Done()
+	}()
+	waitGroup.Wait()
+
 	group, err = groupCoordinator.GetGroup(testUsername, groupId)
 	if err != nil {
 		t.Fatal(err)
@@ -136,85 +172,80 @@ func TestMultiMembersJoinSameGroup(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 
-func TestGroupRebalance(t *testing.T) {
-	config := KafsarConfig{
-		MaxConsumersPerGroup:     10,
-		GroupMinSessionTimeoutMs: 0,
-		GroupMaxSessionTimeoutMs: 30000,
-		InitialDelayedJoinMs:     3000,
-		RebalanceTickMs:          100,
-	}
-	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, config, nil)
-	go func() {
-		resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-		assert.Nil(t, err)
-		assert.Equal(t, service.NONE, resp.ErrorCode)
-		group, err := groupCoordinator.GetGroup(testUsername, groupId)
-		assert.Nil(t, err)
-		assert.Equal(t, CompletingRebalance, group.groupStatus)
-	}()
-
-	resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, service.NONE, resp.ErrorCode)
-	group, err := groupCoordinator.GetGroup(testUsername, groupId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, CompletingRebalance, group.groupStatus)
-}
-
-func TestNotifyReJoinGroup(t *testing.T) {
-	config := KafsarConfig{
-		MaxConsumersPerGroup:     10,
-		GroupMinSessionTimeoutMs: 0,
-		GroupMaxSessionTimeoutMs: 30000,
-		InitialDelayedJoinMs:     3000,
-		RebalanceTickMs:          100,
-	}
-	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, config, nil)
-	resp1, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, service.NONE, resp1.ErrorCode)
-	group, err := groupCoordinator.GetGroup(testUsername, groupId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, CompletingRebalance, group.groupStatus)
-	memberId1 := resp1.MemberId
-	assert.Equal(t, resp1.LeaderId, memberId1)
-
-	go func() {
-		time.Sleep(1 * time.Second)
-		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
-		assert.Equal(t, service.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
-	}()
-	resp2, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, service.NONE, resp2.ErrorCode)
-	assert.Equal(t, CompletingRebalance, group.groupStatus)
-	assert.Equal(t, memberId1, resp2.LeaderId)
-}
-
 func TestHandleJoinGroupMultiMember(t *testing.T) {
-	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
-	resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	config := KafsarConfig{
+		MaxConsumersPerGroup:     10,
+		GroupMinSessionTimeoutMs: 0,
+		GroupMaxSessionTimeoutMs: 30000,
+		InitialDelayedJoinMs:     3000,
+		RebalanceTickMs:          100,
+	}
+	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, config, nil)
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(2)
+	go func() {
+		oneMemberRebalanceHandler(t, groupCoordinator, waitGroup)
+	}()
+	go func() {
+		oneMemberRebalanceHandler(t, groupCoordinator, waitGroup)
+	}()
+	waitGroup.Wait()
+	time.Sleep(5 * time.Second)
+	group, err := groupCoordinator.GetGroup(testUsername, groupId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, service.NONE, resp.ErrorCode)
+	assert.Equal(t, Stable, groupCoordinator.getGroupStatus(group))
+}
 
-	resp, err = groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
-	if err != nil {
-		t.Fatal(err)
+func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorStandalone, waitGroup *sync.WaitGroup) {
+	// one member join
+	resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	assert.Nil(t, err)
+	assert.Equal(t, service.NONE, resp.ErrorCode)
+	group, err := groupCoordinator.GetGroup(testUsername, groupId)
+	assert.Nil(t, err)
+	members := group.members
+	groupAssignments := make([]*service.GroupAssignment, len(members))
+	if resp.MemberId == group.leader {
+		i := 0
+		for memberId := range members {
+			g := &service.GroupAssignment{}
+			g.MemberId = memberId
+			g.MemberAssignment = "testAssignment: " + memberId
+			groupAssignments[i] = g
+			i++
+		}
 	}
-	assert.Equal(t, service.UNKNOWN_SERVER_ERROR, resp.ErrorCode)
+	// one member sync
+	_, err = groupCoordinator.HandleSyncGroup(testUsername, groupId, resp.MemberId, group.generationId, groupAssignments)
+	assert.Nil(t, err)
+	waitGroup.Done()
+	for {
+		time.Sleep(3 * time.Second)
+		// one member heartbeat
+		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+		if heartBeatResp.ErrorCode == service.REBALANCE_IN_PROGRESS {
+			// one member reJoin
+			// reJoin must be leader
+			resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, group.leader, clientId, protocolType, sessionTimeoutMs, protocols)
+			assert.Nil(t, err)
+			newMembers := group.members
+			newGroupAssignments := make([]*service.GroupAssignment, len(newMembers))
+			if resp.MemberId == group.leader {
+				i := 0
+				for newMemberId := range newMembers {
+					g := &service.GroupAssignment{}
+					g.MemberId = newMemberId
+					newGroupAssignments[i] = g
+					i++
+				}
+			}
+			// one member reSync
+			_, err = groupCoordinator.HandleSyncGroup(testUsername, groupId, group.leader, group.generationId, newGroupAssignments)
+			assert.Nil(t, err)
+		}
+	}
 }
 
 func TestHandleJoinGroupInvalidParams(t *testing.T) {
