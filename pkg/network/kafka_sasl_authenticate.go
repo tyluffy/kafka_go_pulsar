@@ -25,22 +25,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) SaslAuthenticate(frame []byte, version int16, context *ctx.NetworkContext) ([]byte, gnet.Action) {
-	if version == 1 || version == 2 {
-		return s.ReactSaslHandshakeAuthVersion(frame, version, context)
-	}
-	logrus.Error("unknown handshake auth version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactSaslHandshakeAuthVersion(frame []byte, version int16, context *ctx.NetworkContext) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeSaslAuthenticateReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode sasl authenticate error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactSaslHandshakeAuth(req *codec.SaslAuthenticateReq, context *ctx.NetworkContext) (*codec.SaslAuthenticateResp, gnet.Action) {
 	logrus.Debug("sasl handshake request ", req)
-	saslHandshakeResp := codec.SaslAuthenticateResp{
+	saslHandshakeResp := &codec.SaslAuthenticateResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -53,7 +40,7 @@ func (s *Server) ReactSaslHandshakeAuthVersion(frame []byte, version int16, cont
 	if authResult {
 		context.Authed(true)
 		s.SaslMap.Store(context.Addr, saslReq)
-		return saslHandshakeResp.Bytes(version), gnet.None
+		return saslHandshakeResp, gnet.None
 	} else {
 		return nil, gnet.Close
 	}

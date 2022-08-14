@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) JoinGroup(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 1 || version == 6 {
-		return s.ReactJoinGroupVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown join group version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactJoinGroupVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeJoinGroupReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode join group error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactJoinGroup(ctx *ctx.NetworkContext, req *codec.JoinGroupReq) (*codec.JoinGroupResp, gnet.Action) {
 	if !s.checkSaslGroup(ctx, req.GroupId) {
 		return nil, gnet.Close
 	}
@@ -57,7 +44,7 @@ func (s *Server) ReactJoinGroupVersion(ctx *ctx.NetworkContext, frame []byte, ve
 		g.ProtocolMetadata = groupProtocol.ProtocolMetadata
 		lowReq.GroupProtocols[i] = g
 	}
-	resp := codec.JoinGroupResp{
+	resp := &codec.JoinGroupResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -81,5 +68,5 @@ func (s *Server) ReactJoinGroupVersion(ctx *ctx.NetworkContext, frame []byte, ve
 		m.Metadata = lowMember.Metadata
 		resp.Members[i] = m
 	}
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }

@@ -22,23 +22,9 @@ import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
-	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) OffsetForLeaderEpoch(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 3 {
-		return s.OffsetForLeaderEpochVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown offset leader epoch version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeOffsetForLeaderEpochReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode offset for leader epoch error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, req *codec.OffsetForLeaderEpochReq) (*codec.OffsetForLeaderEpochResp, gnet.Action) {
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
@@ -63,7 +49,7 @@ func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, frame []by
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp := codec.OffsetForLeaderEpochResp{
+	resp := &codec.OffsetForLeaderEpochResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -83,5 +69,5 @@ func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, frame []by
 		}
 		resp.TopicRespList[i] = f
 	}
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }

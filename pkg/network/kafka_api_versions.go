@@ -23,20 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) ApiVersions(frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 0 || version == 3 {
-		return s.ReactApiVersion(frame, version)
-	}
-	logrus.Error("unknown api version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactApiVersion(frame []byte, version int16) ([]byte, gnet.Action) {
-	apiRequest, r, stack := codec.DecodeApiReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode api versions error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactApiVersion(apiRequest *codec.ApiReq) (*codec.ApiResp, gnet.Action) {
 	logrus.Debug("api request ", apiRequest)
 	resp := codec.ApiResp{
 		BaseResp: codec.BaseResp{
@@ -67,6 +54,5 @@ func (s *Server) ReactApiVersion(frame []byte, version int16) ([]byte, gnet.Acti
 	apiRespVersions[19] = &codec.ApiRespVersion{ApiKey: codec.SaslAuthenticate, MinVersion: 0, MaxVersion: 2}
 	resp.ApiRespVersions = apiRespVersions
 	resp.ThrottleTime = 0
-	apiResponses := &resp
-	return apiResponses.Bytes(version), gnet.None
+	return &resp, gnet.None
 }

@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) ListOffsets(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 1 || version == 5 {
-		return s.ListOffsetsVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown offset version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeListOffsetsReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode list offsets error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, req *codec.ListOffsetsReq) (*codec.ListOffsetsResp, gnet.Action) {
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
@@ -64,7 +51,7 @@ func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, frame []byte, versi
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp := codec.ListOffsetsResp{
+	resp := &codec.ListOffsetsResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -85,5 +72,5 @@ func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, frame []byte, versi
 		}
 		resp.TopicRespList[i] = f
 	}
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }

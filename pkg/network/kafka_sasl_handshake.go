@@ -23,27 +23,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) SaslHandshake(frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 1 || version == 2 {
-		return s.ReactSaslVersion(frame, version)
-	}
-	logrus.Error("unknown fetch version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactSaslVersion(frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeSaslHandshakeReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode sasl handshake error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactSasl(req *codec.SaslHandshakeReq) (*codec.SaslHandshakeResp, gnet.Action) {
 	logrus.Debug("sasl handshake request ", req)
-	saslHandshakeResp := codec.SaslHandshakeResp{
+	saslHandshakeResp := &codec.SaslHandshakeResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
 	}
 	saslHandshakeResp.EnableMechanisms = make([]*codec.EnableMechanism, 1)
 	saslHandshakeResp.EnableMechanisms[0] = &codec.EnableMechanism{SaslMechanism: "PLAIN"}
-	return saslHandshakeResp.Bytes(version), gnet.None
+	return saslHandshakeResp, gnet.None
 }

@@ -25,50 +25,34 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) Metadata(ctx *ctx.NetworkContext, frame []byte, version int16, config *KafkaProtocolConfig) ([]byte, gnet.Action) {
-	if version == 1 || version == 9 {
-		return s.ReactMetadataVersion(ctx, frame, version, config)
-	}
-	logrus.Error("unknown metadata version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactMetadataVersion(ctx *ctx.NetworkContext, frame []byte, version int16, config *KafkaProtocolConfig) ([]byte, gnet.Action) {
-	metadataTopicReq, r, stack := codec.DecodeMetadataReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode metadata error", r, string(stack))
-		return nil, gnet.Close
-	}
-	logrus.Debug("metadata req ", metadataTopicReq)
-	topics := metadataTopicReq.Topics
+func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, config *KafkaProtocolConfig) (*codec.MetadataResp, gnet.Action) {
+	logrus.Debug("metadata req ", req)
+	topics := req.Topics
 	if len(topics) > 1 {
 		logrus.Error("currently, not support more than one topic")
 		return nil, gnet.Close
 	}
 	topic := topics[0].Topic
-	var metadataResp *codec.MetadataResp
+	var metadataResp = &codec.MetadataResp{}
 	partitionNum, err := s.kafkaImpl.PartitionNum(ctx.Addr, topic)
 	if err != nil {
-		metadataResp2 := codec.MetadataResp{}
-		metadataResp2.CorrelationId = metadataTopicReq.CorrelationId
-		metadataResp2.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp2.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
-		metadataResp2.ClusterId = config.ClusterId
-		metadataResp2.ControllerId = config.NodeId
-		metadataResp2.TopicMetadataList = make([]*codec.TopicMetadata, 1)
+		metadataResp.CorrelationId = req.CorrelationId
+		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
+		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
+		metadataResp.ClusterId = config.ClusterId
+		metadataResp.ControllerId = config.NodeId
+		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
 		topicMetadata := codec.TopicMetadata{ErrorCode: int16(service.UNKNOWN_SERVER_ERROR), Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
 		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
-		metadataResp2.TopicMetadataList[0] = &topicMetadata
-		metadataResp2.ClusterAuthorizedOperation = -2147483648
-		metadataResp = &metadataResp2
+		metadataResp.TopicMetadataList[0] = &topicMetadata
+		metadataResp.ClusterAuthorizedOperation = -2147483648
 	} else {
-		metadataResp2 := codec.MetadataResp{}
-		metadataResp2.CorrelationId = metadataTopicReq.CorrelationId
-		metadataResp2.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp2.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
-		metadataResp2.ClusterId = config.ClusterId
-		metadataResp2.ControllerId = config.NodeId
-		metadataResp2.TopicMetadataList = make([]*codec.TopicMetadata, 1)
+		metadataResp.CorrelationId = req.CorrelationId
+		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
+		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
+		metadataResp.ClusterId = config.ClusterId
+		metadataResp.ControllerId = config.NodeId
+		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
 		topicMetadata := codec.TopicMetadata{ErrorCode: 0, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
 		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, partitionNum)
 		for i := 0; i < partitionNum; i++ {
@@ -79,9 +63,8 @@ func (s *Server) ReactMetadataVersion(ctx *ctx.NetworkContext, frame []byte, ver
 			partitionMetadata.CaughtReplicas = replicas
 			topicMetadata.PartitionMetadataList[i] = partitionMetadata
 		}
-		metadataResp2.TopicMetadataList[0] = &topicMetadata
-		metadataResp2.ClusterAuthorizedOperation = -2147483648
-		metadataResp = &metadataResp2
+		metadataResp.TopicMetadataList[0] = &topicMetadata
+		metadataResp.ClusterAuthorizedOperation = -2147483648
 	}
-	return metadataResp.Bytes(version), gnet.None
+	return metadataResp, gnet.None
 }

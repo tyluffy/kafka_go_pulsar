@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) OffsetFetch(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 1 || version == 6 || version == 7 {
-		return s.OffsetFetchVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown offset fetch version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeOffsetFetchReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode offset fetch error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, req *codec.OffsetFetchReq) (*codec.OffsetFetchResp, gnet.Action) {
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
@@ -65,7 +52,7 @@ func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, frame []byte, versi
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp := codec.OffsetFetchResp{
+	resp := &codec.OffsetFetchResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -86,5 +73,5 @@ func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, frame []byte, versi
 		}
 		resp.TopicRespList[i] = f
 	}
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }

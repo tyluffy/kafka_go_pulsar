@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) Produce(ctx *ctx.NetworkContext, frame []byte, version int16, config *KafkaProtocolConfig) ([]byte, gnet.Action) {
-	if version == 7 || version == 8 {
-		return s.ReactProduceVersion(ctx, frame, version, config)
-	}
-	logrus.Error("unknown metadata version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactProduceVersion(ctx *ctx.NetworkContext, frame []byte, version int16, config *KafkaProtocolConfig) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeProduceReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode producer error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactProduce(ctx *ctx.NetworkContext, req *codec.ProduceReq, config *KafkaProtocolConfig) (*codec.ProduceResp, gnet.Action) {
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
@@ -65,7 +52,7 @@ func (s *Server) ReactProduceVersion(ctx *ctx.NetworkContext, frame []byte, vers
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp := codec.ProduceResp{
+	resp := &codec.ProduceResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -86,7 +73,7 @@ func (s *Server) ReactProduceVersion(ctx *ctx.NetworkContext, frame []byte, vers
 		}
 		resp.TopicRespList[i] = f
 	}
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }
 
 func (s *Server) convertRecordBatchReq(recordBatch *codec.RecordBatch) *service.RecordBatch {

@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) Fetch(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 10 || version == 11 {
-		return s.ReactFetchVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown fetch version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactFetchVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeFetchReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode fetch error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*codec.FetchResp, gnet.Action) {
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
@@ -90,7 +77,7 @@ func (s *Server) ReactFetchVersion(ctx *ctx.NetworkContext, frame []byte, versio
 		}
 		resp.TopicRespList[i] = f
 	}
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }
 
 func (s *Server) convertRecordBatchResp(lowRecordBatch *service.RecordBatch) *codec.RecordBatch {

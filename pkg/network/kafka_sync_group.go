@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) SyncGroup(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 1 || version == 4 || version == 5 {
-		return s.ReactSyncGroupVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown sync group version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactSyncGroupVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeSyncGroupReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode sync group error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactSyncGroup(ctx *ctx.NetworkContext, req *codec.SyncGroupReq) (*codec.SyncGroupResp, gnet.Action) {
 	if !s.checkSaslGroup(ctx, req.GroupId) {
 		return nil, gnet.Close
 	}
@@ -58,7 +45,7 @@ func (s *Server) ReactSyncGroupVersion(ctx *ctx.NetworkContext, frame []byte, ve
 		g.MemberId = groupAssignment.MemberId
 		lowReq.GroupAssignments[i] = g
 	}
-	resp := codec.SyncGroupResp{
+	resp := &codec.SyncGroupResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -70,5 +57,5 @@ func (s *Server) ReactSyncGroupVersion(ctx *ctx.NetworkContext, frame []byte, ve
 	resp.ProtocolType = lowResp.ProtocolType
 	resp.ProtocolName = lowResp.ProtocolName
 	resp.MemberAssignment = lowResp.MemberAssignment
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }

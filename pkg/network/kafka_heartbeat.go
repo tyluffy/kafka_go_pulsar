@@ -25,22 +25,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) Heartbeat(frame []byte, version int16, context *ctx.NetworkContext) ([]byte, gnet.Action) {
-	if version == 4 {
-		return s.ReactHeartbeatVersion(frame, version, context)
-	}
-	logrus.Error("unknown heartbeat version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactHeartbeatVersion(frame []byte, version int16, context *ctx.NetworkContext) ([]byte, gnet.Action) {
-	heartbeatReqV4, r, stack := codec.DecodeHeartbeatReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode heartbeat error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactHeartbeat(heartbeatReqV4 *codec.HeartbeatReq, context *ctx.NetworkContext) (*codec.HeartbeatResp, gnet.Action) {
 	logrus.Debug("heart beat req ", heartbeatReqV4)
-	heartBeatResp := codec.HeartbeatResp{
+	heartBeatResp := &codec.HeartbeatResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: heartbeatReqV4.CorrelationId,
 		},
@@ -53,5 +40,5 @@ func (s *Server) ReactHeartbeatVersion(frame []byte, version int16, context *ctx
 	req.GroupId = heartbeatReqV4.GroupId
 	beat := s.kafkaImpl.HeartBeat(context.Addr, req)
 	heartBeatResp.ErrorCode = int16(beat.ErrorCode)
-	return heartBeatResp.Bytes(version), gnet.None
+	return heartBeatResp, gnet.None
 }

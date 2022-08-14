@@ -25,20 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) LeaveGroup(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	if version == 0 || version == 4 {
-		return s.ReactLeaveGroupVersion(ctx, frame, version)
-	}
-	logrus.Error("unknown leave group version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) ReactLeaveGroupVersion(ctx *ctx.NetworkContext, frame []byte, version int16) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeLeaveGroupReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode leave group error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactLeaveGroup(ctx *ctx.NetworkContext, req *codec.LeaveGroupReq) (*codec.LeaveGroupResp, gnet.Action) {
 	if !s.checkSaslGroup(ctx, req.GroupId) {
 		return nil, gnet.Close
 	}
@@ -53,7 +40,7 @@ func (s *Server) ReactLeaveGroupVersion(ctx *ctx.NetworkContext, frame []byte, v
 		m.GroupInstanceId = member.GroupInstanceId
 		lowReq.Members[i] = m
 	}
-	resp := codec.LeaveGroupResp{
+	resp := &codec.LeaveGroupResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -71,5 +58,5 @@ func (s *Server) ReactLeaveGroupVersion(ctx *ctx.NetworkContext, frame []byte, v
 		resp.Members[i] = m
 	}
 	resp.MemberErrorCode = int16(lowResp.MemberErrorCode)
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }

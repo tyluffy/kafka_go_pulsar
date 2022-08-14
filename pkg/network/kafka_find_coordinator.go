@@ -23,22 +23,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Server) FindCoordinator(frame []byte, version int16, config *KafkaProtocolConfig) ([]byte, gnet.Action) {
-	if version == 0 || version == 3 {
-		return s.FindCoordinatorVersion(frame, version, config)
-	}
-	logrus.Error("unknown find coordinator version ", version)
-	return nil, gnet.Close
-}
-
-func (s *Server) FindCoordinatorVersion(frame []byte, version int16, config *KafkaProtocolConfig) ([]byte, gnet.Action) {
-	req, r, stack := codec.DecodeFindCoordinatorReq(frame, version)
-	if r != nil {
-		logrus.Warn("decode find coordinator error", r, string(stack))
-		return nil, gnet.Close
-	}
+func (s *Server) ReactFindCoordinator(req *codec.FindCoordinatorReq, config *KafkaProtocolConfig) (*codec.FindCoordinatorResp, gnet.Action) {
 	logrus.Debug("req ", req)
-	resp := codec.FindCoordinatorResp{
+	resp := &codec.FindCoordinatorResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
@@ -47,5 +34,5 @@ func (s *Server) FindCoordinatorVersion(frame []byte, version int16, config *Kaf
 		Port:   int(config.AdvertisePort),
 	}
 	logrus.Debug("resp ", resp)
-	return resp.Bytes(version), gnet.None
+	return resp, gnet.None
 }
