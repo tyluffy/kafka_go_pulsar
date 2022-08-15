@@ -79,9 +79,9 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 		}, nil
 	}
 
-	group.groupLock.RLock()
+	group.groupMemberLock.RLock()
 	numMember := len(group.members)
-	group.groupLock.RUnlock()
+	group.groupMemberLock.RUnlock()
 	if g.kafsarConfig.MaxConsumersPerGroup > 0 && numMember >= g.kafsarConfig.MaxConsumersPerGroup {
 		logrus.Errorf("join group failed, exceed maximum number of members. groupId: %s, memberId: %s, current: %d, maxConsumersPerGroup: %d",
 			groupId, memberId, numMember, g.kafsarConfig.MaxConsumersPerGroup)
