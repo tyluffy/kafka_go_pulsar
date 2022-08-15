@@ -45,12 +45,12 @@ func main() {
 	config.PulsarConfig.HttpPort = *pulsarHttpPort
 	config.PulsarConfig.TcpPort = *pulsarTcpPort
 	config.KafsarConfig.GnetConfig.ListenHost = *listenHost
-	config.KafsarConfig.GnetConfig.ListenPort = uint16(*listenPort)
+	config.KafsarConfig.GnetConfig.ListenPort = *listenPort
 	config.KafsarConfig.GnetConfig.EventLoopNum = *eventLoopNum
 	config.KafsarConfig.NeedSasl = *needSasl
 	config.KafsarConfig.ClusterId = *clusterId
 	config.KafsarConfig.AdvertiseHost = *advertiseListenAddr
-	config.KafsarConfig.AdvertisePort = uint16(*advertiseListenPort)
+	config.KafsarConfig.AdvertisePort = *advertiseListenPort
 	config.KafsarConfig.MaxConn = int32(*maxConn)
 	config.KafsarConfig.MaxConsumersPerGroup = 1
 	config.KafsarConfig.GroupMaxSessionTimeoutMs = 60000

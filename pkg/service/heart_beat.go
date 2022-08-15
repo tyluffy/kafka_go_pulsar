@@ -17,6 +17,8 @@
 
 package service
 
+import "github.com/protocol-laboratory/kafka-codec-go/codec"
+
 type HeartBeatReq struct {
 	GroupId         string
 	GenerationId    int
@@ -26,5 +28,5 @@ type HeartBeatReq struct {
 }
 
 type HeartBeatResp struct {
-	ErrorCode ErrorCode
+	ErrorCode codec.ErrorCode
 }

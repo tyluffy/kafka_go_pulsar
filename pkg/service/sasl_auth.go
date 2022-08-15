@@ -17,7 +17,10 @@
 
 package service
 
-import "net"
+import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
+	"net"
+)
 
 type SaslReq struct {
 	Username string
@@ -25,6 +28,6 @@ type SaslReq struct {
 	ClientId string
 }
 
-func SaslAuth(addr net.Addr, impl KfkServer, req SaslReq) (bool, ErrorCode) {
+func SaslAuth(addr net.Addr, impl KfsarServer, req SaslReq) (bool, codec.ErrorCode) {
 	return impl.SaslAuth(addr, req)
 }

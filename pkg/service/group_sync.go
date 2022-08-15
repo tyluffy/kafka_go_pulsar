@@ -17,6 +17,8 @@
 
 package service
 
+import "github.com/protocol-laboratory/kafka-codec-go/codec"
+
 type SyncGroupReq struct {
 	GroupId          string
 	ClientId         string
@@ -34,7 +36,7 @@ type GroupAssignment struct {
 }
 
 type SyncGroupResp struct {
-	ErrorCode        ErrorCode
+	ErrorCode        codec.ErrorCode
 	ProtocolType     string
 	ProtocolName     string
 	MemberAssignment string

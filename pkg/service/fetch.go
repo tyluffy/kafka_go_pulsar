@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"net"
 )
 
@@ -45,7 +46,7 @@ type FetchPartitionReq struct {
 }
 
 type FetchPartitionResp struct {
-	ErrorCode        ErrorCode
+	ErrorCode        codec.ErrorCode
 	PartitionId      int
 	HighWatermark    int64
 	LastStableOffset int64
@@ -53,6 +54,6 @@ type FetchPartitionResp struct {
 	RecordBatch      *RecordBatch
 }
 
-func Fetch(addr net.Addr, impl KfkServer, req *FetchReq) ([]*FetchTopicResp, error) {
+func Fetch(addr net.Addr, impl KfsarServer, req *FetchReq) ([]*FetchTopicResp, error) {
 	return impl.Fetch(addr, req)
 }

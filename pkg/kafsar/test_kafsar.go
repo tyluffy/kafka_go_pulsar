@@ -22,7 +22,7 @@ import (
 	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 )
 
-func SetupKafsar() (*Broker, uint16) {
+func SetupKafsar() (*Broker, int) {
 	port, err := test.AcquireUnusedPort()
 	if err != nil {
 		panic(err)
@@ -34,7 +34,7 @@ func SetupKafsar() (*Broker, uint16) {
 	return broker, port
 }
 
-func setupKafsarInternal(port uint16) (*Broker, error) {
+func setupKafsarInternal(port int) (*Broker, error) {
 	config := &Config{}
 	gnetConfig := kgnet.GnetConfig{
 		ListenHost: "localhost",

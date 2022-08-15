@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -42,7 +41,7 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 		metadataResp.ClusterId = config.ClusterId
 		metadataResp.ControllerId = config.NodeId
 		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
-		topicMetadata := codec.TopicMetadata{ErrorCode: int16(service.UNKNOWN_SERVER_ERROR), Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
+		topicMetadata := codec.TopicMetadata{ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR), Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
 		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
 		metadataResp.TopicMetadataList[0] = &topicMetadata
 		metadataResp.ClusterAuthorizedOperation = -2147483648

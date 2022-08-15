@@ -50,7 +50,7 @@ type OffsetLeaderEpochPartitionResp struct {
 	Offset      int64
 }
 
-func OffsetLeaderEpoch(addr net.Addr, impl KfkServer, reqList []*OffsetLeaderEpochTopicReq) ([]*OffsetLeaderEpochTopicResp, error) {
+func OffsetLeaderEpoch(addr net.Addr, impl KfsarServer, reqList []*OffsetLeaderEpochTopicReq) ([]*OffsetLeaderEpochTopicResp, error) {
 	respList := make([]*OffsetLeaderEpochTopicResp, len(reqList))
 	for i, topicReq := range reqList {
 		f := &OffsetLeaderEpochTopicResp{}

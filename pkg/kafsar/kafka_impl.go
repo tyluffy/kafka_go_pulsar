@@ -26,6 +26,7 @@ import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/pkg/errors"
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
@@ -154,7 +155,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 		logrus.Errorf("fetch partition failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
-			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 			RecordBatch: &recordBatch,
 		}
 	}
@@ -164,7 +165,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 		logrus.Errorf("fetch partition failed when get pulsar topic %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
-			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 			RecordBatch: &recordBatch,
 		}
 	}
@@ -178,14 +179,14 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 			if err == nil && group.groupStatus != Stable {
 				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
 				return &service.FetchPartitionResp{
-					ErrorCode: service.REBALANCE_IN_PROGRESS,
+					ErrorCode: codec.REBALANCE_IN_PROGRESS,
 				}
 			}
 		}
 		logrus.Errorf("can not find reader for topic: %s when fetch partition", partitionedTopic)
 		return &service.FetchPartitionResp{
 			PartitionId: req.PartitionId,
-			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 			RecordBatch: &recordBatch,
 		}
 	}
@@ -238,7 +239,7 @@ OUT:
 	}
 	recordBatch.Offset = baseOffset
 	return &service.FetchPartitionResp{
-		ErrorCode:        service.NONE,
+		ErrorCode:        codec.NONE,
 		PartitionId:      req.PartitionId,
 		LastStableOffset: 0,
 		LogStartOffset:   0,
@@ -253,7 +254,7 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 	if !exist {
 		logrus.Errorf("username not found in join group: %s", req.GroupId)
 		return &service.JoinGroupResp{
-			ErrorCode:    service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:    codec.UNKNOWN_SERVER_ERROR,
 			MemberId:     req.MemberId,
 			GenerationId: -1,
 		}, nil
@@ -264,7 +265,7 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 	if err != nil {
 		logrus.Errorf("unexpected exception in join group: %s, error: %s", req.GroupId, err)
 		return &service.JoinGroupResp{
-			ErrorCode:    service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:    codec.UNKNOWN_SERVER_ERROR,
 			MemberId:     req.MemberId,
 			GenerationId: -1,
 		}, nil
@@ -288,7 +289,7 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 	if !exist {
 		logrus.Errorf("username not found in leave group: %s", req.GroupId)
 		return &service.LeaveGroupResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	logrus.Infof("%s leaving group: %s, members: %+v", addr.String(), req.GroupId, req.Members)
@@ -296,14 +297,14 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 	if err != nil {
 		logrus.Errorf("unexpected exception in leaving group: %s, error: %s", req.GroupId, err)
 		return &service.LeaveGroupResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
 	if err != nil {
 		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
 		return &service.LeaveGroupResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	for _, topic := range group.partitionedTopic {
@@ -334,7 +335,7 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 	if !exist {
 		logrus.Errorf("username not found in sync group: %s", req.GroupId)
 		return &service.SyncGroupResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	logrus.Infof("%s syncing group: %s, memberId: %s", addr.String(), req.GroupId, req.MemberId)
@@ -342,7 +343,7 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 	if err != nil {
 		logrus.Errorf("unexpected exception in sync group: %s, error: %s", req.GroupId, err)
 		return &service.SyncGroupResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	return syncGroupResp, nil
@@ -355,7 +356,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 	if !exist {
 		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.ListOffsetsPartitionResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	logrus.Infof("%s offset list topic: %s, partition: %d", addr.String(), kafkaTopic, req.PartitionId)
@@ -363,7 +364,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 	if err != nil {
 		logrus.Errorf("get topic failed. err: %s", err)
 		return &service.ListOffsetsPartitionResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	k.mutex.RLock()
@@ -376,13 +377,13 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 			if err == nil && group.groupStatus != Stable {
 				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
 				return &service.ListOffsetsPartitionResp{
-					ErrorCode: service.REBALANCE_IN_PROGRESS,
+					ErrorCode: codec.REBALANCE_IN_PROGRESS,
 				}, nil
 			}
 		}
 		logrus.Errorf("get pulsar client failed. err: %s", err)
 		return &service.ListOffsetsPartitionResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
@@ -390,7 +391,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 	if !exist {
 		logrus.Errorf("offset list failed, topic: %s, does not exist", partitionedTopic)
 		return &service.ListOffsetsPartitionResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	offset := constant.DefaultOffset
@@ -399,14 +400,14 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 		if err != nil {
 			logrus.Errorf("get topic %s latest offset failed %s\n", kafkaTopic, err)
 			return &service.ListOffsetsPartitionResp{
-				ErrorCode: service.UNKNOWN_SERVER_ERROR,
+				ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
 		lastedMsg, err := utils.ReadLastedMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, msg, client)
 		if err != nil {
 			logrus.Errorf("read lasted msg failed. topic: %s, err: %s", kafkaTopic, err)
 			return &service.ListOffsetsPartitionResp{
-				ErrorCode: service.UNKNOWN_SERVER_ERROR,
+				ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
 		if lastedMsg != nil {
@@ -414,7 +415,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 			if err != nil {
 				logrus.Errorf("offset list failed, topic: %s, err: %s", partitionedTopic, err)
 				return &service.ListOffsetsPartitionResp{
-					ErrorCode: service.UNKNOWN_SERVER_ERROR,
+					ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 				}, nil
 			}
 			offset = convOffset(lastedMsg, k.kafsarConfig.ContinuousOffset)
@@ -435,7 +436,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		logrus.Errorf("offset commit failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
 			PartitionId: req.PartitionId,
-			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	logrus.Infof("%s topic: %s, partition: %d, commit offset: %d", addr.String(), kafkaTopic, req.PartitionId, req.OffsetCommitOffset)
@@ -444,7 +445,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		logrus.Errorf("offset commit failed when get pulsar topic %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
 			PartitionId: req.PartitionId,
-			ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	k.mutex.RLock()
@@ -456,11 +457,11 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
 			if err == nil && group.groupStatus != Stable {
 				logrus.Warnf("group is preparing rebalance. groupId: %s, topic: %s", groupId, partitionedTopic)
-				return &service.OffsetCommitPartitionResp{ErrorCode: service.REBALANCE_IN_PROGRESS}, nil
+				return &service.OffsetCommitPartitionResp{ErrorCode: codec.REBALANCE_IN_PROGRESS}, nil
 			}
 		}
 		logrus.Errorf("commit offset failed, topic: %s, does not exist", partitionedTopic)
-		return &service.OffsetCommitPartitionResp{ErrorCode: service.UNKNOWN_TOPIC_ID}, nil
+		return &service.OffsetCommitPartitionResp{ErrorCode: codec.UNKNOWN_TOPIC_ID}, nil
 	}
 	k.mutex.RUnlock()
 	length := readerMessages.messageIds.Len()
@@ -477,7 +478,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 				logrus.Errorf("commit offset failed. topic: %s, err: %s", kafkaTopic, err)
 				return &service.OffsetCommitPartitionResp{
 					PartitionId: req.PartitionId,
-					ErrorCode:   service.UNKNOWN_SERVER_ERROR,
+					ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 				}, nil
 			}
 			logrus.Infof("ack pulsar %s for %s", partitionedTopic, messageIdPair.MessageId)
@@ -491,7 +492,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 	}
 	return &service.OffsetCommitPartitionResp{
 		PartitionId: req.PartitionId,
-		ErrorCode:   service.NONE,
+		ErrorCode:   codec.NONE,
 	}, nil
 }
 
@@ -502,7 +503,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetFetchPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	logrus.Infof("%s fetch topic: %s offset, partition: %d", addr.String(), topic, req.PartitionId)
@@ -510,7 +511,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if err != nil {
 		logrus.Errorf("offset fetch failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetFetchPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	subscriptionName, err := k.server.SubscriptionName(req.GroupId)
@@ -535,7 +536,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 			k.mutex.Unlock()
 			logrus.Errorf("%s, create channel failed, error: %s", topic, err)
 			return &service.OffsetFetchPartitionResp{
-				ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+				ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 			}, nil
 		}
 		metadata.reader = reader
@@ -547,7 +548,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	if err != nil {
 		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
 		return &service.OffsetFetchPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	if !k.checkPartitionTopicExist(group.partitionedTopic, partitionedTopic) {
@@ -562,7 +563,7 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		Offset:      kafkaOffset,
 		LeaderEpoch: -1,
 		Metadata:    nil,
-		ErrorCode:   int16(service.NONE),
+		ErrorCode:   int16(codec.NONE),
 	}, nil
 }
 
@@ -581,7 +582,7 @@ func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetLeaderEpochPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	logrus.Infof("%s offset leader epoch topic: %s, partition: %d", addr.String(), topic, req.PartitionId)
@@ -589,36 +590,36 @@ func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.
 	if err != nil {
 		logrus.Errorf("get partitioned topic failed. topic: %s", topic)
 		return &service.OffsetLeaderEpochPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	msgByte, err := utils.GetLatestMsgId(partitionedTopic, k.getPulsarHttpUrl())
 	if err != nil {
 		logrus.Errorf("get last msgId failed. topic: %s", topic)
 		return &service.OffsetLeaderEpochPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	msg, err := utils.ReadLastedMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, msgByte, k.pulsarCommonClient)
 	if err != nil {
 		logrus.Errorf("get last msgId failed. topic: %s", topic)
 		return &service.OffsetLeaderEpochPartitionResp{
-			ErrorCode: int16(service.UNKNOWN_SERVER_ERROR),
+			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
 	offset := convOffset(msg, k.kafsarConfig.ContinuousOffset)
 	return &service.OffsetLeaderEpochPartitionResp{
-		ErrorCode:   int16(service.NONE),
+		ErrorCode:   int16(codec.NONE),
 		PartitionId: req.PartitionId,
 		LeaderEpoch: req.LeaderEpoch,
 		Offset:      offset,
 	}, nil
 }
 
-func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, service.ErrorCode) {
+func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, codec.ErrorCode) {
 	auth, err := k.server.Auth(req.Username, req.Password, req.ClientId)
 	if err != nil || !auth {
-		return false, service.SASL_AUTHENTICATION_FAILED
+		return false, codec.SASL_AUTHENTICATION_FAILED
 	}
 	k.mutex.RLock()
 	_, exist := k.userInfoManager[addr.String()]
@@ -631,23 +632,23 @@ func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, service.
 		}
 		k.mutex.Unlock()
 	}
-	return true, service.NONE
+	return true, codec.NONE
 }
 
-func (k *KafkaImpl) SaslAuthTopic(addr net.Addr, req service.SaslReq, topic, permissionType string) (bool, service.ErrorCode) {
+func (k *KafkaImpl) SaslAuthTopic(addr net.Addr, req service.SaslReq, topic, permissionType string) (bool, codec.ErrorCode) {
 	auth, err := k.server.AuthTopic(req.Username, req.Password, req.ClientId, topic, permissionType)
 	if err != nil || !auth {
-		return false, service.SASL_AUTHENTICATION_FAILED
+		return false, codec.SASL_AUTHENTICATION_FAILED
 	}
-	return true, service.NONE
+	return true, codec.NONE
 }
 
-func (k *KafkaImpl) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, consumerGroup string) (bool, service.ErrorCode) {
+func (k *KafkaImpl) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, consumerGroup string) (bool, codec.ErrorCode) {
 	auth, err := k.server.AuthTopicGroup(req.Username, req.Password, req.ClientId, consumerGroup)
 	if err != nil || !auth {
-		return false, service.SASL_AUTHENTICATION_FAILED
+		return false, codec.SASL_AUTHENTICATION_FAILED
 	}
-	return true, service.NONE
+	return true, codec.NONE
 }
 
 func (k *KafkaImpl) Disconnect(addr net.Addr) {
@@ -734,11 +735,11 @@ func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
 		return &service.HeartBeatResp{
-			ErrorCode: service.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}
 	}
 	resp := k.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
-	if resp.ErrorCode == service.REBALANCE_IN_PROGRESS {
+	if resp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
 		group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
 		if err != nil {
 			logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())

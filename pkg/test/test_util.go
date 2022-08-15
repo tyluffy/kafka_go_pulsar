@@ -51,7 +51,7 @@ func NewPulsarClient() pulsar.Client {
 	return client
 }
 
-func AcquireUnusedPort() (uint16, error) {
+func AcquireUnusedPort() (int, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:0")
 	if err != nil {
 		return 0, err
@@ -61,7 +61,7 @@ func AcquireUnusedPort() (uint16, error) {
 		return 0, err
 	}
 	defer l.Close()
-	return uint16(l.Addr().(*net.TCPAddr).Port), nil
+	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
 func HttpGetRequest(url string) ([]byte, error) {

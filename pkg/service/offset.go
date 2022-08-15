@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"net"
 )
 
@@ -38,13 +39,13 @@ type ListOffsetsPartitionReq struct {
 }
 
 type ListOffsetsPartitionResp struct {
-	ErrorCode   ErrorCode
+	ErrorCode   codec.ErrorCode
 	PartitionId int
 	Time        int64
 	Offset      int64
 }
 
-func Offset(addr net.Addr, impl KfkServer, reqList []*ListOffsetsTopicReq) ([]*ListOffsetsTopicResp, error) {
+func Offset(addr net.Addr, impl KfsarServer, reqList []*ListOffsetsTopicReq) ([]*ListOffsetsTopicResp, error) {
 	result := make([]*ListOffsetsTopicResp, len(reqList))
 	for i, req := range reqList {
 		f := &ListOffsetsTopicResp{}

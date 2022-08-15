@@ -17,6 +17,8 @@
 
 package service
 
+import "github.com/protocol-laboratory/kafka-codec-go/codec"
+
 type LeaveGroupReq struct {
 	ClientId string
 	GroupId  string
@@ -29,7 +31,7 @@ type LeaveGroupMember struct {
 }
 
 type LeaveGroupResp struct {
-	ErrorCode       ErrorCode
+	ErrorCode       codec.ErrorCode
 	Members         []*LeaveGroupMember
-	MemberErrorCode ErrorCode
+	MemberErrorCode codec.ErrorCode
 }

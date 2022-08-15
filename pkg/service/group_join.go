@@ -17,6 +17,8 @@
 
 package service
 
+import "github.com/protocol-laboratory/kafka-codec-go/codec"
+
 type JoinGroupReq struct {
 	ClientId        string
 	GroupId         string
@@ -33,7 +35,7 @@ type GroupProtocol struct {
 }
 
 type JoinGroupResp struct {
-	ErrorCode    ErrorCode
+	ErrorCode    codec.ErrorCode
 	GenerationId int
 	ProtocolType *string
 	ProtocolName string

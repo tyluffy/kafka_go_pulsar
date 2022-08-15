@@ -18,10 +18,11 @@
 package service
 
 import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"net"
 )
 
-type KfkServer interface {
+type KfsarServer interface {
 	PartitionNum(addr net.Addr, topic string) (int, error)
 
 	// Fetch method called this already authed
@@ -51,11 +52,11 @@ type KfkServer interface {
 	// Produce method called this already authed
 	Produce(addr net.Addr, topic string, partition int, req *ProducePartitionReq) (*ProducePartitionResp, error)
 
-	SaslAuth(addr net.Addr, req SaslReq) (bool, ErrorCode)
+	SaslAuth(addr net.Addr, req SaslReq) (bool, codec.ErrorCode)
 
-	SaslAuthTopic(addr net.Addr, req SaslReq, topic, permissionType string) (bool, ErrorCode)
+	SaslAuthTopic(addr net.Addr, req SaslReq, topic, permissionType string) (bool, codec.ErrorCode)
 
-	SaslAuthConsumerGroup(addr net.Addr, req SaslReq, consumerGroup string) (bool, ErrorCode)
+	SaslAuthConsumerGroup(addr net.Addr, req SaslReq, consumerGroup string) (bool, codec.ErrorCode)
 
 	HeartBeat(addr net.Addr, req HeartBeatReq) *HeartBeatResp
 

@@ -45,7 +45,7 @@ type KafsarConfig struct {
 	// Kafka protocol config
 	ClusterId     string
 	AdvertiseHost string
-	AdvertisePort uint16
+	AdvertisePort int
 
 	MaxConsumersPerGroup     int
 	GroupMinSessionTimeoutMs int
@@ -100,7 +100,7 @@ func (b *Broker) Run() error {
 	return nil
 }
 
-func (b *Broker) runKafka(config *KafsarConfig, impl service.KfkServer) (*ServerControl, error) {
+func (b *Broker) runKafka(config *KafsarConfig, impl service.KfsarServer) (*ServerControl, error) {
 	kfkProtocolConfig := &network.KafkaProtocolConfig{}
 	kfkProtocolConfig.ClusterId = config.ClusterId
 	kfkProtocolConfig.AdvertiseHost = config.AdvertiseHost

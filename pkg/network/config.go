@@ -21,7 +21,7 @@ type KafkaProtocolConfig struct {
 	ClusterId     string
 	NodeId        int32
 	AdvertiseHost string
-	AdvertisePort uint16
+	AdvertisePort int
 	NeedSasl      bool
 	MaxConn       int32
 }
