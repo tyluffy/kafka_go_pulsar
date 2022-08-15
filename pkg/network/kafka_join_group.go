@@ -49,7 +49,7 @@ func (s *Server) ReactJoinGroup(ctx *ctx.NetworkContext, req *codec.JoinGroupReq
 			CorrelationId: req.CorrelationId,
 		},
 	}
-	lowResp, err := s.kafkaImpl.GroupJoin(ctx.Addr, lowReq)
+	lowResp, err := s.kafsarImpl.GroupJoin(ctx.Addr, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

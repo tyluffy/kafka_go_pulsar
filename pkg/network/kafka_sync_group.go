@@ -50,7 +50,7 @@ func (s *Server) ReactSyncGroup(ctx *ctx.NetworkContext, req *codec.SyncGroupReq
 			CorrelationId: req.CorrelationId,
 		},
 	}
-	lowResp, err := s.kafkaImpl.GroupSync(ctx.Addr, lowReq)
+	lowResp, err := s.kafsarImpl.GroupSync(ctx.Addr, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

@@ -48,7 +48,7 @@ func (s *Server) ReactProduce(ctx *ctx.NetworkContext, req *codec.ProduceReq, co
 		}
 		lowReq.TopicReqList[i] = lowTopicReq
 	}
-	lowResp, err := service.Produce(ctx.Addr, s.kafkaImpl, lowReq)
+	lowResp, err := service.Produce(ctx.Addr, s.kafsarImpl, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

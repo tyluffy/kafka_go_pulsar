@@ -47,7 +47,7 @@ func (s *Server) OffsetCommitVersion(ctx *ctx.NetworkContext, req *codec.OffsetC
 		}
 		lowReqList[i] = lowTopicReq
 	}
-	lowTopicRespList, err := service.OffsetCommit(ctx.Addr, s.kafkaImpl, lowReqList)
+	lowTopicRespList, err := service.OffsetCommit(ctx.Addr, s.kafsarImpl, lowReqList)
 	if err != nil {
 		return nil, gnet.Close
 	}

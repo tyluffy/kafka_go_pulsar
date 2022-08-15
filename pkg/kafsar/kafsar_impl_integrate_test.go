@@ -92,7 +92,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := test.TopicPrefix + topic
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +391,7 @@ func TestEarliestMsg(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,7 +495,7 @@ func TestLatestMsg(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +599,7 @@ func TestLatestTypeWithNoMsg(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +656,7 @@ func TestEarliestTypeWithNoMsg(t *testing.T) {
 	topic := uuid.New().String()
 	groupId := uuid.New().String()
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -714,7 +714,7 @@ func TestMinBytesMsg(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -802,7 +802,7 @@ func TestMaxBytesMsg(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, MaxFetchConfig)
+	k, err := NewKafsar(kafsarServer, MaxFetchConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -891,7 +891,7 @@ func TestMultiMemberLeaveGroup(t *testing.T) {
 	groupId := uuid.New().String()
 	newConfig := config
 	newConfig.KafsarConfig.MaxConsumersPerGroup = 10
-	k, err := newKafsar(kafsarServer, newConfig)
+	k, err := NewKafsar(kafsarServer, newConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1005,7 +1005,7 @@ func TestFetchAfterDisConnect(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(kafsarServer, config)
+	k, err := NewKafsar(kafsarServer, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1122,7 +1122,7 @@ func TestMsgWithFlowQuota(t *testing.T) {
 	groupId := uuid.New().String()
 	pulsarTopic := utils.PartitionedTopic(test.DefaultTopicType+test.TopicPrefix+topic, partition)
 	test.SetupPulsar()
-	k, err := newKafsar(test.FlowKafsarImpl{}, MaxFetchConfig)
+	k, err := NewKafsar(test.FlowKafsarImpl{}, MaxFetchConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

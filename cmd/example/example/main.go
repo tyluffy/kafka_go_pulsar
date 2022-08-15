@@ -66,8 +66,11 @@ func main() {
 	config.KafsarConfig.InitialDelayedJoinMs = 3000
 	config.KafsarConfig.RebalanceTickMs = 100
 	e := &ExampleKafsarImpl{}
-	server := kafsar.NewKafsarServer(config, e)
-	err := server.Run()
+	server, err := kafsar.NewKafsar(e, config)
+	if err != nil {
+		panic(err)
+	}
+	err = server.Run()
 	if err != nil {
 		panic(err)
 	}

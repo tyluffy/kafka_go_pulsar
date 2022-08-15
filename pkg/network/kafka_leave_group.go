@@ -45,7 +45,7 @@ func (s *Server) ReactLeaveGroup(ctx *ctx.NetworkContext, req *codec.LeaveGroupR
 			CorrelationId: req.CorrelationId,
 		},
 	}
-	lowResp, err := s.kafkaImpl.GroupLeave(ctx.Addr, lowReq)
+	lowResp, err := s.kafsarImpl.GroupLeave(ctx.Addr, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

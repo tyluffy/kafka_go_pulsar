@@ -38,7 +38,7 @@ func (s *Server) ReactHeartbeat(heartbeatReqV4 *codec.HeartbeatReq, context *ctx
 	req.GroupInstanceId = heartbeatReqV4.GroupInstanceId
 	req.MemberId = heartbeatReqV4.MemberId
 	req.GroupId = heartbeatReqV4.GroupId
-	beat := s.kafkaImpl.HeartBeat(context.Addr, req)
+	beat := s.kafsarImpl.HeartBeat(context.Addr, req)
 	heartBeatResp.ErrorCode = int16(beat.ErrorCode)
 	return heartBeatResp, gnet.None
 }

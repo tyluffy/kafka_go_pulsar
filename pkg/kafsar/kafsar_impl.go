@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
+	"github.com/paashzj/kafka_go_pulsar/pkg/network"
 	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/pkg/errors"
@@ -34,8 +35,9 @@ import (
 	"time"
 )
 
-type KafkaImpl struct {
+type Broker struct {
 	server             Server
+	kafkaServer        *network.Server
 	pulsarConfig       PulsarConfig
 	pulsarCommonClient pulsar.Client
 	pulsarClientManage map[string]pulsar.Client
@@ -67,88 +69,104 @@ type MemberInfo struct {
 	clientId        string
 }
 
-func newKafsar(impl Server, config *Config) (*KafkaImpl, error) {
-	kafka := KafkaImpl{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
-	pulsarUrl := fmt.Sprintf("pulsar://%s:%d", kafka.pulsarConfig.Host, kafka.pulsarConfig.TcpPort)
+func NewKafsar(impl Server, config *Config) (*Broker, error) {
+	broker := Broker{server: impl, pulsarConfig: config.PulsarConfig, kafsarConfig: config.KafsarConfig}
+	pulsarUrl := fmt.Sprintf("pulsar://%s:%d", broker.pulsarConfig.Host, broker.pulsarConfig.TcpPort)
 	var err error
 	pulsarClient, err := pulsar.NewClient(pulsar.ClientOptions{URL: pulsarUrl})
 	if err != nil {
 		return nil, err
 	}
-	pulsarAddr := kafka.getPulsarHttpUrl()
-	kafka.offsetManager, err = NewOffsetManager(pulsarClient, config.KafsarConfig, pulsarAddr)
+	pulsarAddr := broker.getPulsarHttpUrl()
+	broker.offsetManager, err = NewOffsetManager(pulsarClient, config.KafsarConfig, pulsarAddr)
 	if err != nil {
 		pulsarClient.Close()
 		return nil, err
 	}
 
-	offsetChannel := kafka.offsetManager.Start()
+	offsetChannel := broker.offsetManager.Start()
 	for {
 		if <-offsetChannel {
 			break
 		}
 	}
-	if kafka.kafsarConfig.GroupCoordinatorType == Cluster {
-		kafka.groupCoordinator = NewGroupCoordinatorCluster()
-	} else if kafka.kafsarConfig.GroupCoordinatorType == Standalone {
-		kafka.groupCoordinator = NewGroupCoordinatorStandalone(kafka.pulsarConfig, kafka.kafsarConfig, pulsarClient)
+	if broker.kafsarConfig.GroupCoordinatorType == Cluster {
+		broker.groupCoordinator = NewGroupCoordinatorCluster()
+	} else if broker.kafsarConfig.GroupCoordinatorType == Standalone {
+		broker.groupCoordinator = NewGroupCoordinatorStandalone(broker.pulsarConfig, broker.kafsarConfig, pulsarClient)
 	} else {
-		return nil, errors.Errorf("unexpect GroupCoordinatorType: %v", kafka.kafsarConfig.GroupCoordinatorType)
+		return nil, errors.Errorf("unexpect GroupCoordinatorType: %v", broker.kafsarConfig.GroupCoordinatorType)
 	}
-	kafka.pulsarCommonClient = pulsarClient
-	kafka.readerManager = make(map[string]*ReaderMetadata)
-	kafka.userInfoManager = make(map[string]*userInfo)
-	kafka.memberManager = make(map[string]*MemberInfo)
-	kafka.pulsarClientManage = make(map[string]pulsar.Client)
-	kafka.topicGroupManager = make(map[string]string)
-	kafka.tracer = NewTracer(config.TraceConfig)
-	return &kafka, nil
+	broker.pulsarCommonClient = pulsarClient
+	broker.readerManager = make(map[string]*ReaderMetadata)
+	broker.userInfoManager = make(map[string]*userInfo)
+	broker.memberManager = make(map[string]*MemberInfo)
+	broker.pulsarClientManage = make(map[string]pulsar.Client)
+	broker.topicGroupManager = make(map[string]string)
+	kfkProtocolConfig := &network.KafkaProtocolConfig{}
+	kfkProtocolConfig.ClusterId = config.KafsarConfig.ClusterId
+	kfkProtocolConfig.AdvertiseHost = config.KafsarConfig.AdvertiseHost
+	kfkProtocolConfig.AdvertisePort = config.KafsarConfig.AdvertisePort
+	kfkProtocolConfig.NeedSasl = config.KafsarConfig.NeedSasl
+	kfkProtocolConfig.MaxConn = config.KafsarConfig.MaxConn
+	var aux service.KfsarServer = &broker
+	broker.kafkaServer, err = network.NewServer(&config.KafsarConfig.GnetConfig, kfkProtocolConfig, aux)
+	if err != nil {
+		return nil, err
+	}
+	broker.tracer = NewTracer(config.TraceConfig)
+	return &broker, nil
 }
 
-func (k *KafkaImpl) Produce(addr net.Addr, kafkaTopic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
+func (b *Broker) Run() error {
+	logrus.Info("kafsar started")
+	return b.kafkaServer.Run()
+}
+
+func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *service.ProducePartitionReq) (*service.ProducePartitionResp, error) {
 	panic("implement me")
 }
 
-func (k *KafkaImpl) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.FetchTopicResp, error) {
-	traceSpan := k.tracer.CreateLocalLogSpan(context.Background())
-	k.tracer.SpanLog(traceSpan, "fetch action starting")
+func (b *Broker) Fetch(addr net.Addr, req *service.FetchReq) ([]*service.FetchTopicResp, error) {
+	traceSpan := b.tracer.CreateLocalLogSpan(context.Background())
+	b.tracer.SpanLog(traceSpan, "fetch action starting")
 
 	var maxWaitTime int
-	if req.MaxWaitTime < k.kafsarConfig.MaxFetchWaitMs {
+	if req.MaxWaitTime < b.kafsarConfig.MaxFetchWaitMs {
 		maxWaitTime = req.MaxWaitTime
 	} else {
-		maxWaitTime = k.kafsarConfig.MaxFetchWaitMs
+		maxWaitTime = b.kafsarConfig.MaxFetchWaitMs
 	}
 	reqList := req.FetchTopicReqList
 	result := make([]*service.FetchTopicResp, len(reqList))
 	for i, topicReq := range reqList {
-		topicSpan := k.traceFetchLog(traceSpan, fmt.Sprintf(
+		topicSpan := b.traceFetchLog(traceSpan, fmt.Sprintf(
 			"topic: %s fetching", topicReq.Topic), true, false)
 		f := &service.FetchTopicResp{}
 		f.Topic = topicReq.Topic
 		f.FetchPartitionRespList = make([]*service.FetchPartitionResp, len(topicReq.FetchPartitionReqList))
 		for j, partitionReq := range topicReq.FetchPartitionReqList {
-			f.FetchPartitionRespList[j] = k.FetchPartition(addr, topicReq.Topic, partitionReq,
+			f.FetchPartitionRespList[j] = b.FetchPartition(addr, topicReq.Topic, partitionReq,
 				req.MaxBytes, req.MinBytes, maxWaitTime/len(topicReq.FetchPartitionReqList), topicSpan)
 		}
 		result[i] = f
-		k.traceFetchLog(topicSpan, fmt.Sprintf("topic: %s fetched", topicReq.Topic), false, true)
+		b.traceFetchLog(topicSpan, fmt.Sprintf("topic: %s fetched", topicReq.Topic), false, true)
 	}
-	k.tracer.SpanLogWithClose(traceSpan, "fetch action done")
+	b.tracer.SpanLogWithClose(traceSpan, "fetch action done")
 	return result, nil
 }
 
 // FetchPartition visible for testing
-func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, span TracerSpan) *service.FetchPartitionResp {
+func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic string, req *service.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, span TracerSpan) *service.FetchPartitionResp {
 	// open tracer, log
-	fetchSpan := k.traceFetchLog(span, fmt.Sprintf("fetching partition %s:%d",
+	fetchSpan := b.traceFetchLog(span, fmt.Sprintf("fetching partition %s:%d",
 		kafkaTopic, req.PartitionId), true, false)
-	defer k.traceFetchLog(fetchSpan, fmt.Sprintf("fetched partition %s:%d",
+	defer b.traceFetchLog(fetchSpan, fmt.Sprintf("fetched partition %s:%d",
 		kafkaTopic, req.PartitionId), false, true)
 	start := time.Now()
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	var records []*service.Record
 	recordBatch := service.RecordBatch{Records: records}
 	if !exist {
@@ -160,7 +178,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 		}
 	}
 	logrus.Infof("%s fetch topic: %s partition %d", addr.String(), kafkaTopic, req.PartitionId)
-	partitionedTopic, err := k.partitionedTopic(user, kafkaTopic, req.PartitionId)
+	partitionedTopic, err := b.partitionedTopic(user, kafkaTopic, req.PartitionId)
 	if err != nil {
 		logrus.Errorf("fetch partition failed when get pulsar topic %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.FetchPartitionResp{
@@ -169,13 +187,13 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 			RecordBatch: &recordBatch,
 		}
 	}
-	k.mutex.RLock()
-	readerMetadata, exist := k.readerManager[partitionedTopic+req.ClientId]
+	b.mutex.RLock()
+	readerMetadata, exist := b.readerManager[partitionedTopic+req.ClientId]
 	if !exist {
-		groupId, exist := k.topicGroupManager[partitionedTopic]
-		k.mutex.RUnlock()
+		groupId, exist := b.topicGroupManager[partitionedTopic]
+		b.mutex.RUnlock()
 		if exist {
-			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
+			group, err := b.groupCoordinator.GetGroup(user.username, groupId)
 			if err == nil && group.groupStatus != Stable {
 				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
 				return &service.FetchPartitionResp{
@@ -190,7 +208,7 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 			RecordBatch: &recordBatch,
 		}
 	}
-	k.mutex.RUnlock()
+	b.mutex.RUnlock()
 	byteLength := 0
 	var baseOffset int64
 	fistMessage := true
@@ -198,10 +216,10 @@ func (k *KafkaImpl) FetchPartition(addr net.Addr, kafkaTopic string, req *servic
 	defer cancel()
 OUT:
 	for {
-		if time.Since(start).Milliseconds() >= int64(maxWaitMs) || len(recordBatch.Records) >= k.kafsarConfig.MaxFetchRecord {
+		if time.Since(start).Milliseconds() >= int64(maxWaitMs) || len(recordBatch.Records) >= b.kafsarConfig.MaxFetchRecord {
 			break OUT
 		}
-		flowControl := k.server.HasFlowQuota(user.username, partitionedTopic)
+		flowControl := b.server.HasFlowQuota(user.username, partitionedTopic)
 		if !flowControl {
 			break
 		}
@@ -215,7 +233,7 @@ OUT:
 		}
 		byteLength = byteLength + utils.CalculateMsgLength(message)
 		logrus.Infof("receive msg: %s from %s", message.ID(), message.Topic())
-		offset := convOffset(message, k.kafsarConfig.ContinuousOffset)
+		offset := convOffset(message, b.kafsarConfig.ContinuousOffset)
 		if fistMessage {
 			fistMessage = false
 			baseOffset = offset
@@ -230,7 +248,7 @@ OUT:
 			MessageId: message.ID(),
 			Offset:    offset,
 		})
-		if byteLength > minBytes && time.Since(start).Milliseconds() >= int64(k.kafsarConfig.MinFetchWaitMs) {
+		if byteLength > minBytes && time.Since(start).Milliseconds() >= int64(b.kafsarConfig.MinFetchWaitMs) {
 			break
 		}
 		if byteLength > maxBytes {
@@ -247,10 +265,10 @@ OUT:
 	}
 }
 
-func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*service.JoinGroupResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("username not found in join group: %s", req.GroupId)
 		return &service.JoinGroupResp{
@@ -260,7 +278,7 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 		}, nil
 	}
 	logrus.Infof("%s joining to group: %s, memberId: %s", addr.String(), req.GroupId, req.MemberId)
-	joinGroupResp, err := k.groupCoordinator.HandleJoinGroup(user.username, req.GroupId, req.MemberId, req.ClientId, req.ProtocolType,
+	joinGroupResp, err := b.groupCoordinator.HandleJoinGroup(user.username, req.GroupId, req.MemberId, req.ClientId, req.ProtocolType,
 		req.SessionTimeout, req.GroupProtocols)
 	if err != nil {
 		logrus.Errorf("unexpected exception in join group: %s, error: %s", req.GroupId, err)
@@ -276,16 +294,16 @@ func (k *KafkaImpl) GroupJoin(addr net.Addr, req *service.JoinGroupReq) (*servic
 		groupInstanceId: req.GroupInstanceId,
 		clientId:        req.ClientId,
 	}
-	k.mutex.Lock()
-	k.memberManager[addr.String()] = &memberInfo
-	k.mutex.Unlock()
+	b.mutex.Lock()
+	b.memberManager[addr.String()] = &memberInfo
+	b.mutex.Unlock()
 	return joinGroupResp, nil
 }
 
-func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*service.LeaveGroupResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("username not found in leave group: %s", req.GroupId)
 		return &service.LeaveGroupResp{
@@ -293,14 +311,14 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 		}, nil
 	}
 	logrus.Infof("%s leaving group: %s, members: %+v", addr.String(), req.GroupId, req.Members)
-	leaveGroupResp, err := k.groupCoordinator.HandleLeaveGroup(user.username, req.GroupId, req.Members)
+	leaveGroupResp, err := b.groupCoordinator.HandleLeaveGroup(user.username, req.GroupId, req.Members)
 	if err != nil {
 		logrus.Errorf("unexpected exception in leaving group: %s, error: %s", req.GroupId, err)
 		return &service.LeaveGroupResp{
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
+	group, err := b.groupCoordinator.GetGroup(user.username, req.GroupId)
 	if err != nil {
 		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
 		return &service.LeaveGroupResp{
@@ -308,30 +326,30 @@ func (k *KafkaImpl) GroupLeave(addr net.Addr, req *service.LeaveGroupReq) (*serv
 		}, nil
 	}
 	for _, topic := range group.partitionedTopic {
-		k.mutex.Lock()
-		readerMetadata, exist := k.readerManager[topic+req.ClientId]
+		b.mutex.Lock()
+		readerMetadata, exist := b.readerManager[topic+req.ClientId]
 		if exist {
 			readerMetadata.reader.Close()
 			logrus.Infof("success close reader topic: %s", group.partitionedTopic)
-			delete(k.readerManager, topic+req.ClientId)
+			delete(b.readerManager, topic+req.ClientId)
 			readerMetadata = nil
 		}
-		client, exist := k.pulsarClientManage[topic+req.ClientId]
+		client, exist := b.pulsarClientManage[topic+req.ClientId]
 		if exist {
 			client.Close()
-			delete(k.pulsarClientManage, topic+req.ClientId)
+			delete(b.pulsarClientManage, topic+req.ClientId)
 			client = nil
 		}
-		delete(k.topicGroupManager, topic)
-		k.mutex.Unlock()
+		delete(b.topicGroupManager, topic)
+		b.mutex.Unlock()
 	}
 	return leaveGroupResp, nil
 }
 
-func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*service.SyncGroupResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("username not found in sync group: %s", req.GroupId)
 		return &service.SyncGroupResp{
@@ -339,7 +357,7 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 		}, nil
 	}
 	logrus.Infof("%s syncing group: %s, memberId: %s", addr.String(), req.GroupId, req.MemberId)
-	syncGroupResp, err := k.groupCoordinator.HandleSyncGroup(user.username, req.GroupId, req.MemberId, req.GenerationId, req.GroupAssignments)
+	syncGroupResp, err := b.groupCoordinator.HandleSyncGroup(user.username, req.GroupId, req.MemberId, req.GenerationId, req.GroupAssignments)
 	if err != nil {
 		logrus.Errorf("unexpected exception in sync group: %s, error: %s", req.GroupId, err)
 		return &service.SyncGroupResp{
@@ -349,10 +367,10 @@ func (k *KafkaImpl) GroupSync(addr net.Addr, req *service.SyncGroupReq) (*servic
 	return syncGroupResp, nil
 }
 
-func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic string, req *service.ListOffsetsPartitionReq) (*service.ListOffsetsPartitionResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.ListOffsetsPartitionResp{
@@ -360,20 +378,20 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 		}, nil
 	}
 	logrus.Infof("%s offset list topic: %s, partition: %d", addr.String(), kafkaTopic, req.PartitionId)
-	partitionedTopic, err := k.partitionedTopic(user, kafkaTopic, req.PartitionId)
+	partitionedTopic, err := b.partitionedTopic(user, kafkaTopic, req.PartitionId)
 	if err != nil {
 		logrus.Errorf("get topic failed. err: %s", err)
 		return &service.ListOffsetsPartitionResp{
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	k.mutex.RLock()
-	client, exist := k.pulsarClientManage[partitionedTopic+req.ClientId]
+	b.mutex.RLock()
+	client, exist := b.pulsarClientManage[partitionedTopic+req.ClientId]
 	if !exist {
-		groupId, exist := k.topicGroupManager[partitionedTopic]
-		k.mutex.RUnlock()
+		groupId, exist := b.topicGroupManager[partitionedTopic]
+		b.mutex.RUnlock()
 		if exist {
-			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
+			group, err := b.groupCoordinator.GetGroup(user.username, groupId)
 			if err == nil && group.groupStatus != Stable {
 				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
 				return &service.ListOffsetsPartitionResp{
@@ -386,8 +404,8 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
-	k.mutex.RUnlock()
+	readerMessages, exist := b.readerManager[partitionedTopic+req.ClientId]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset list failed, topic: %s, does not exist", partitionedTopic)
 		return &service.ListOffsetsPartitionResp{
@@ -396,14 +414,14 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 	}
 	offset := constant.DefaultOffset
 	if req.Time == constant.TimeLasted {
-		msg, err := utils.GetLatestMsgId(partitionedTopic, k.getPulsarHttpUrl())
+		msg, err := utils.GetLatestMsgId(partitionedTopic, b.getPulsarHttpUrl())
 		if err != nil {
 			logrus.Errorf("get topic %s latest offset failed %s\n", kafkaTopic, err)
 			return &service.ListOffsetsPartitionResp{
 				ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
-		lastedMsg, err := utils.ReadLastedMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, msg, client)
+		lastedMsg, err := utils.ReadLastedMsg(partitionedTopic, b.kafsarConfig.MaxFetchWaitMs, msg, client)
 		if err != nil {
 			logrus.Errorf("read lasted msg failed. topic: %s, err: %s", kafkaTopic, err)
 			return &service.ListOffsetsPartitionResp{
@@ -418,7 +436,7 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 					ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 				}, nil
 			}
-			offset = convOffset(lastedMsg, k.kafsarConfig.ContinuousOffset)
+			offset = convOffset(lastedMsg, b.kafsarConfig.ContinuousOffset)
 		}
 	}
 	return &service.ListOffsetsPartitionResp{
@@ -428,10 +446,10 @@ func (k *KafkaImpl) OffsetListPartition(addr net.Addr, kafkaTopic string, req *s
 	}, nil
 }
 
-func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req *service.OffsetCommitPartitionReq) (*service.OffsetCommitPartitionResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset commit failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
@@ -440,7 +458,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		}, nil
 	}
 	logrus.Infof("%s topic: %s, partition: %d, commit offset: %d", addr.String(), kafkaTopic, req.PartitionId, req.OffsetCommitOffset)
-	partitionedTopic, err := k.partitionedTopic(user, kafkaTopic, req.PartitionId)
+	partitionedTopic, err := b.partitionedTopic(user, kafkaTopic, req.PartitionId)
 	if err != nil {
 		logrus.Errorf("offset commit failed when get pulsar topic %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &service.OffsetCommitPartitionResp{
@@ -448,13 +466,13 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
-	k.mutex.RLock()
-	readerMessages, exist := k.readerManager[partitionedTopic+req.ClientId]
+	b.mutex.RLock()
+	readerMessages, exist := b.readerManager[partitionedTopic+req.ClientId]
 	if !exist {
-		groupId, exist := k.topicGroupManager[partitionedTopic]
-		k.mutex.RUnlock()
+		groupId, exist := b.topicGroupManager[partitionedTopic]
+		b.mutex.RUnlock()
 		if exist {
-			group, err := k.groupCoordinator.GetGroup(user.username, groupId)
+			group, err := b.groupCoordinator.GetGroup(user.username, groupId)
 			if err == nil && group.groupStatus != Stable {
 				logrus.Warnf("group is preparing rebalance. groupId: %s, topic: %s", groupId, partitionedTopic)
 				return &service.OffsetCommitPartitionResp{ErrorCode: codec.REBALANCE_IN_PROGRESS}, nil
@@ -463,7 +481,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		logrus.Errorf("commit offset failed, topic: %s, does not exist", partitionedTopic)
 		return &service.OffsetCommitPartitionResp{ErrorCode: codec.UNKNOWN_TOPIC_ID}, nil
 	}
-	k.mutex.RUnlock()
+	b.mutex.RUnlock()
 	length := readerMessages.messageIds.Len()
 	for i := 0; i < length; i++ {
 		front := readerMessages.messageIds.Front()
@@ -473,7 +491,7 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 		messageIdPair := front.Value.(MessageIdPair)
 		// kafka commit offset maybe greater than current offset
 		if messageIdPair.Offset == req.OffsetCommitOffset || ((messageIdPair.Offset < req.OffsetCommitOffset) && (i == length-1)) {
-			err := k.offsetManager.CommitOffset(user.username, kafkaTopic, readerMessages.groupId, req.PartitionId, messageIdPair)
+			err := b.offsetManager.CommitOffset(user.username, kafkaTopic, readerMessages.groupId, req.PartitionId, messageIdPair)
 			if err != nil {
 				logrus.Errorf("commit offset failed. topic: %s, err: %s", kafkaTopic, err)
 				return &service.OffsetCommitPartitionResp{
@@ -496,10 +514,10 @@ func (k *KafkaImpl) OffsetCommitPartition(addr net.Addr, kafkaTopic string, req 
 	}, nil
 }
 
-func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.OffsetFetchPartitionReq) (*service.OffsetFetchPartitionResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) OffsetFetch(addr net.Addr, topic string, req *service.OffsetFetchPartitionReq) (*service.OffsetFetchPartitionResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetFetchPartitionResp{
@@ -507,33 +525,33 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		}, nil
 	}
 	logrus.Infof("%s fetch topic: %s offset, partition: %d", addr.String(), topic, req.PartitionId)
-	partitionedTopic, err := k.partitionedTopic(user, topic, req.PartitionId)
+	partitionedTopic, err := b.partitionedTopic(user, topic, req.PartitionId)
 	if err != nil {
 		logrus.Errorf("offset fetch failed when get pulsar topic %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetFetchPartitionResp{
 			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
-	subscriptionName, err := k.server.SubscriptionName(req.GroupId)
+	subscriptionName, err := b.server.SubscriptionName(req.GroupId)
 	if err != nil {
 		logrus.Errorf("sync group %s failed when offset fetch, error: %s", req.GroupId, err)
 	}
-	messagePair, flag := k.offsetManager.AcquireOffset(user.username, topic, req.GroupId, req.PartitionId)
+	messagePair, flag := b.offsetManager.AcquireOffset(user.username, topic, req.GroupId, req.PartitionId)
 	messageId := pulsar.EarliestMessageID()
 	kafkaOffset := constant.UnknownOffset
 	if flag {
 		kafkaOffset = messagePair.Offset
 		messageId = messagePair.MessageId
 	}
-	k.mutex.RLock()
-	_, exist = k.readerManager[partitionedTopic+req.ClientId]
-	k.mutex.RUnlock()
+	b.mutex.RLock()
+	_, exist = b.readerManager[partitionedTopic+req.ClientId]
+	b.mutex.RUnlock()
 	if !exist {
-		k.mutex.Lock()
+		b.mutex.Lock()
 		metadata := ReaderMetadata{groupId: req.GroupId, messageIds: list.New()}
-		channel, reader, err := k.createReader(partitionedTopic, subscriptionName, messageId, req.ClientId)
+		channel, reader, err := b.createReader(partitionedTopic, subscriptionName, messageId, req.ClientId)
 		if err != nil {
-			k.mutex.Unlock()
+			b.mutex.Unlock()
 			logrus.Errorf("%s, create channel failed, error: %s", topic, err)
 			return &service.OffsetFetchPartitionResp{
 				ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
@@ -541,22 +559,22 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 		}
 		metadata.reader = reader
 		metadata.channel = channel
-		k.readerManager[partitionedTopic+req.ClientId] = &metadata
-		k.mutex.Unlock()
+		b.readerManager[partitionedTopic+req.ClientId] = &metadata
+		b.mutex.Unlock()
 	}
-	group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
+	group, err := b.groupCoordinator.GetGroup(user.username, req.GroupId)
 	if err != nil {
 		logrus.Errorf("get group %s failed, error: %s", req.GroupId, err)
 		return &service.OffsetFetchPartitionResp{
 			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
-	if !k.checkPartitionTopicExist(group.partitionedTopic, partitionedTopic) {
+	if !b.checkPartitionTopicExist(group.partitionedTopic, partitionedTopic) {
 		group.partitionedTopic = append(group.partitionedTopic, partitionedTopic)
 	}
-	k.mutex.Lock()
-	k.topicGroupManager[partitionedTopic] = group.groupId
-	k.mutex.Unlock()
+	b.mutex.Lock()
+	b.topicGroupManager[partitionedTopic] = group.groupId
+	b.mutex.Unlock()
 
 	return &service.OffsetFetchPartitionResp{
 		PartitionId: req.PartitionId,
@@ -567,18 +585,18 @@ func (k *KafkaImpl) OffsetFetch(addr net.Addr, topic string, req *service.Offset
 	}, nil
 }
 
-func (k *KafkaImpl) partitionedTopic(user *userInfo, kafkaTopic string, partitionId int) (string, error) {
-	pulsarTopic, err := k.server.PulsarTopic(user.username, kafkaTopic)
+func (b *Broker) partitionedTopic(user *userInfo, kafkaTopic string, partitionId int) (string, error) {
+	pulsarTopic, err := b.server.PulsarTopic(user.username, kafkaTopic)
 	if err != nil {
 		return "", err
 	}
 	return pulsarTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partitionId), nil
 }
 
-func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.OffsetLeaderEpochPartitionReq) (*service.OffsetLeaderEpochPartitionResp, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.OffsetLeaderEpochPartitionReq) (*service.OffsetLeaderEpochPartitionResp, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s, kafka topic: %s", addr.String(), topic)
 		return &service.OffsetLeaderEpochPartitionResp{
@@ -586,28 +604,28 @@ func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.
 		}, nil
 	}
 	logrus.Infof("%s offset leader epoch topic: %s, partition: %d", addr.String(), topic, req.PartitionId)
-	partitionedTopic, err := k.partitionedTopic(user, topic, req.PartitionId)
+	partitionedTopic, err := b.partitionedTopic(user, topic, req.PartitionId)
 	if err != nil {
 		logrus.Errorf("get partitioned topic failed. topic: %s", topic)
 		return &service.OffsetLeaderEpochPartitionResp{
 			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
-	msgByte, err := utils.GetLatestMsgId(partitionedTopic, k.getPulsarHttpUrl())
+	msgByte, err := utils.GetLatestMsgId(partitionedTopic, b.getPulsarHttpUrl())
 	if err != nil {
 		logrus.Errorf("get last msgId failed. topic: %s", topic)
 		return &service.OffsetLeaderEpochPartitionResp{
 			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
-	msg, err := utils.ReadLastedMsg(partitionedTopic, k.kafsarConfig.MaxFetchWaitMs, msgByte, k.pulsarCommonClient)
+	msg, err := utils.ReadLastedMsg(partitionedTopic, b.kafsarConfig.MaxFetchWaitMs, msgByte, b.pulsarCommonClient)
 	if err != nil {
 		logrus.Errorf("get last msgId failed. topic: %s", topic)
 		return &service.OffsetLeaderEpochPartitionResp{
 			ErrorCode: int16(codec.UNKNOWN_SERVER_ERROR),
 		}, nil
 	}
-	offset := convOffset(msg, k.kafsarConfig.ContinuousOffset)
+	offset := convOffset(msg, b.kafsarConfig.ContinuousOffset)
 	return &service.OffsetLeaderEpochPartitionResp{
 		ErrorCode:   int16(codec.NONE),
 		PartitionId: req.PartitionId,
@@ -616,53 +634,53 @@ func (k *KafkaImpl) OffsetLeaderEpoch(addr net.Addr, topic string, req *service.
 	}, nil
 }
 
-func (k *KafkaImpl) SaslAuth(addr net.Addr, req service.SaslReq) (bool, codec.ErrorCode) {
-	auth, err := k.server.Auth(req.Username, req.Password, req.ClientId)
+func (b *Broker) SaslAuth(addr net.Addr, req service.SaslReq) (bool, codec.ErrorCode) {
+	auth, err := b.server.Auth(req.Username, req.Password, req.ClientId)
 	if err != nil || !auth {
 		return false, codec.SASL_AUTHENTICATION_FAILED
 	}
-	k.mutex.RLock()
-	_, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+	b.mutex.RLock()
+	_, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
-		k.mutex.Lock()
-		k.userInfoManager[addr.String()] = &userInfo{
+		b.mutex.Lock()
+		b.userInfoManager[addr.String()] = &userInfo{
 			username: req.Username,
 			clientId: req.ClientId,
 		}
-		k.mutex.Unlock()
+		b.mutex.Unlock()
 	}
 	return true, codec.NONE
 }
 
-func (k *KafkaImpl) SaslAuthTopic(addr net.Addr, req service.SaslReq, topic, permissionType string) (bool, codec.ErrorCode) {
-	auth, err := k.server.AuthTopic(req.Username, req.Password, req.ClientId, topic, permissionType)
+func (b *Broker) SaslAuthTopic(addr net.Addr, req service.SaslReq, topic, permissionType string) (bool, codec.ErrorCode) {
+	auth, err := b.server.AuthTopic(req.Username, req.Password, req.ClientId, topic, permissionType)
 	if err != nil || !auth {
 		return false, codec.SASL_AUTHENTICATION_FAILED
 	}
 	return true, codec.NONE
 }
 
-func (k *KafkaImpl) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, consumerGroup string) (bool, codec.ErrorCode) {
-	auth, err := k.server.AuthTopicGroup(req.Username, req.Password, req.ClientId, consumerGroup)
+func (b *Broker) SaslAuthConsumerGroup(addr net.Addr, req service.SaslReq, consumerGroup string) (bool, codec.ErrorCode) {
+	auth, err := b.server.AuthTopicGroup(req.Username, req.Password, req.ClientId, consumerGroup)
 	if err != nil || !auth {
 		return false, codec.SASL_AUTHENTICATION_FAILED
 	}
 	return true, codec.NONE
 }
 
-func (k *KafkaImpl) Disconnect(addr net.Addr) {
+func (b *Broker) Disconnect(addr net.Addr) {
 	logrus.Infof("lost connection: %s", addr)
 	if addr == nil {
 		return
 	}
-	k.mutex.RLock()
-	memberInfo, exist := k.memberManager[addr.String()]
-	k.mutex.RUnlock()
+	b.mutex.RLock()
+	memberInfo, exist := b.memberManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
-		k.mutex.Lock()
-		delete(k.userInfoManager, addr.String())
-		k.mutex.Unlock()
+		b.mutex.Lock()
+		delete(b.userInfoManager, addr.String())
+		b.mutex.Unlock()
 		return
 	}
 	memberList := []*service.LeaveGroupMember{
@@ -676,50 +694,51 @@ func (k *KafkaImpl) Disconnect(addr net.Addr) {
 		GroupId:  memberInfo.groupId,
 		Members:  memberList,
 	}
-	_, err := k.GroupLeave(addr, &req)
+	_, err := b.GroupLeave(addr, &req)
 	if err != nil {
 		logrus.Errorf("leave group failed. err: %s", err)
 	}
 	// leave group will use user information
-	k.mutex.Lock()
-	delete(k.userInfoManager, addr.String())
-	k.mutex.Unlock()
+	b.mutex.Lock()
+	delete(b.userInfoManager, addr.String())
+	b.mutex.Unlock()
 }
 
-func (k *KafkaImpl) Close() {
-	k.offsetManager.Close()
-	k.mutex.Lock()
-	for key, value := range k.pulsarClientManage {
+func (b *Broker) Close() {
+	b.kafkaServer.Close(context.Background())
+	b.offsetManager.Close()
+	b.mutex.Lock()
+	for key, value := range b.pulsarClientManage {
 		value.Close()
-		delete(k.pulsarClientManage, key)
+		delete(b.pulsarClientManage, key)
 	}
-	k.mutex.Unlock()
+	b.mutex.Unlock()
 }
 
-func (k *KafkaImpl) GetOffsetManager() OffsetManager {
-	return k.offsetManager
+func (b *Broker) GetOffsetManager() OffsetManager {
+	return b.offsetManager
 }
 
-func (k *KafkaImpl) createReader(partitionedTopic string, subscriptionName string, messageId pulsar.MessageID, clientId string) (chan pulsar.ReaderMessage, pulsar.Reader, error) {
-	client, exist := k.pulsarClientManage[partitionedTopic+clientId]
+func (b *Broker) createReader(partitionedTopic string, subscriptionName string, messageId pulsar.MessageID, clientId string) (chan pulsar.ReaderMessage, pulsar.Reader, error) {
+	client, exist := b.pulsarClientManage[partitionedTopic+clientId]
 	if !exist {
 		var err error
-		pulsarUrl := fmt.Sprintf("pulsar://%s:%d", k.pulsarConfig.Host, k.pulsarConfig.TcpPort)
+		pulsarUrl := fmt.Sprintf("pulsar://%s:%d", b.pulsarConfig.Host, b.pulsarConfig.TcpPort)
 		client, err = pulsar.NewClient(pulsar.ClientOptions{URL: pulsarUrl})
 		if err != nil {
 			logrus.Errorf("create pulsar client failed.")
 			return nil, nil, err
 		}
-		k.pulsarClientManage[partitionedTopic+clientId] = client
+		b.pulsarClientManage[partitionedTopic+clientId] = client
 	}
-	channel := make(chan pulsar.ReaderMessage, k.kafsarConfig.ConsumerReceiveQueueSize)
+	channel := make(chan pulsar.ReaderMessage, b.kafsarConfig.ConsumerReceiveQueueSize)
 	options := pulsar.ReaderOptions{
 		Topic:             partitionedTopic,
 		Name:              subscriptionName,
 		SubscriptionName:  subscriptionName,
 		StartMessageID:    messageId,
 		MessageChannel:    channel,
-		ReceiverQueueSize: k.kafsarConfig.ConsumerReceiveQueueSize,
+		ReceiverQueueSize: b.kafsarConfig.ConsumerReceiveQueueSize,
 	}
 	reader, err := client.CreateReader(options)
 	if err != nil {
@@ -728,53 +747,53 @@ func (k *KafkaImpl) createReader(partitionedTopic string, subscriptionName strin
 	return channel, reader, nil
 }
 
-func (k *KafkaImpl) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.HeartBeatResp {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) HeartBeat(addr net.Addr, req service.HeartBeatReq) *service.HeartBeatResp {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
 		return &service.HeartBeatResp{
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}
 	}
-	resp := k.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
+	resp := b.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
 	if resp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
-		group, err := k.groupCoordinator.GetGroup(user.username, req.GroupId)
+		group, err := b.groupCoordinator.GetGroup(user.username, req.GroupId)
 		if err != nil {
 			logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
 			return resp
 		}
 		for _, topic := range group.partitionedTopic {
-			k.mutex.Lock()
-			readerMetadata, exist := k.readerManager[topic+req.ClientId]
+			b.mutex.Lock()
+			readerMetadata, exist := b.readerManager[topic+req.ClientId]
 			if exist {
 				readerMetadata.reader.Close()
 				logrus.Infof("success close reader topic: %s", group.partitionedTopic)
-				delete(k.readerManager, topic+req.ClientId)
+				delete(b.readerManager, topic+req.ClientId)
 				readerMetadata = nil
 			}
-			client, exist := k.pulsarClientManage[topic+req.ClientId]
+			client, exist := b.pulsarClientManage[topic+req.ClientId]
 			if exist {
 				client.Close()
-				delete(k.pulsarClientManage, topic+req.ClientId)
+				delete(b.pulsarClientManage, topic+req.ClientId)
 				client = nil
 			}
-			k.mutex.Unlock()
+			b.mutex.Unlock()
 		}
 	}
 	return resp
 }
 
-func (k *KafkaImpl) PartitionNum(addr net.Addr, kafkaTopic string) (int, error) {
-	k.mutex.RLock()
-	user, exist := k.userInfoManager[addr.String()]
-	k.mutex.RUnlock()
+func (b *Broker) PartitionNum(addr net.Addr, kafkaTopic string) (int, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("get partitionNum failed. user is not found. topic: %s", kafkaTopic)
 		return 0, errors.New("user not found.")
 	}
-	num, err := k.server.PartitionNum(user.username, kafkaTopic)
+	num, err := b.server.PartitionNum(user.username, kafkaTopic)
 	if err != nil {
 		logrus.Errorf("get partition num failed. topic: %s, err: %s", kafkaTopic, err)
 		return 0, errors.New("get partition num failed.")
@@ -782,11 +801,11 @@ func (k *KafkaImpl) PartitionNum(addr net.Addr, kafkaTopic string) (int, error) 
 	return num, nil
 }
 
-func (k *KafkaImpl) getPulsarHttpUrl() string {
-	return fmt.Sprintf("http://%s:%d", k.pulsarConfig.Host, k.pulsarConfig.HttpPort)
+func (b *Broker) getPulsarHttpUrl() string {
+	return fmt.Sprintf("http://%s:%d", b.pulsarConfig.Host, b.pulsarConfig.HttpPort)
 }
 
-func (k *KafkaImpl) checkPartitionTopicExist(topics []string, partitionTopic string) bool {
+func (b *Broker) checkPartitionTopicExist(topics []string, partitionTopic string) bool {
 	for _, topic := range topics {
 		if strings.EqualFold(topic, partitionTopic) {
 			return true
@@ -795,11 +814,11 @@ func (k *KafkaImpl) checkPartitionTopicExist(topics []string, partitionTopic str
 	return false
 }
 
-func (k *KafkaImpl) checkTracer() bool {
-	if k.tracer == nil {
+func (b *Broker) checkTracer() bool {
+	if b.tracer == nil {
 		return false
 	}
-	if !k.tracer.enableTrace {
+	if !b.tracer.enableTrace {
 		return false
 	}
 	return true
@@ -807,8 +826,8 @@ func (k *KafkaImpl) checkTracer() bool {
 
 // traceFetchLog trace fetch action, if isNewSpan == true, will create a new child span to log
 // if isClose == true, will close when span is written
-func (k *KafkaImpl) traceFetchLog(span TracerSpan, log string, isNewSpan, isClose bool) TracerSpan {
-	if !k.checkTracer() {
+func (b *Broker) traceFetchLog(span TracerSpan, log string, isNewSpan, isClose bool) TracerSpan {
+	if !b.checkTracer() {
 		return span
 	}
 	if span.span == nil {
@@ -817,16 +836,16 @@ func (k *KafkaImpl) traceFetchLog(span TracerSpan, log string, isNewSpan, isClos
 
 	var childSpan TracerSpan
 	if isNewSpan {
-		childSpan = k.tracer.CreateLocalLogSpan(span.ctx)
+		childSpan = b.tracer.CreateLocalLogSpan(span.ctx)
 	} else {
 		childSpan = span
 	}
 
 	if isClose {
-		k.tracer.SpanLogWithClose(childSpan, log)
+		b.tracer.SpanLogWithClose(childSpan, log)
 		return childSpan
 	}
 
-	k.tracer.SpanLog(childSpan, log)
+	b.tracer.SpanLog(childSpan, log)
 	return childSpan
 }

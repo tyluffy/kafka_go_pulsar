@@ -38,7 +38,7 @@ func (s *Server) checkSaslGroup(ctx *ctx.NetworkContext, groupId string) bool {
 	if !ok {
 		return false
 	}
-	res, code := s.kafkaImpl.SaslAuthConsumerGroup(ctx.Addr, saslReq.(service.SaslReq), groupId)
+	res, code := s.kafsarImpl.SaslAuthConsumerGroup(ctx.Addr, saslReq.(service.SaslReq), groupId)
 	if code != 0 || !res {
 		return false
 	}
@@ -53,7 +53,7 @@ func (s *Server) checkSaslTopic(ctx *ctx.NetworkContext, topic, permissionType s
 	if !ok {
 		return false
 	}
-	res, code := s.kafkaImpl.SaslAuthTopic(ctx.Addr, saslReq.(service.SaslReq), topic, permissionType)
+	res, code := s.kafsarImpl.SaslAuthTopic(ctx.Addr, saslReq.(service.SaslReq), topic, permissionType)
 	if code != 0 || !res {
 		return false
 	}

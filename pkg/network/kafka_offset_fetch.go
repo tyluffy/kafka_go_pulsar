@@ -48,7 +48,7 @@ func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, req *codec.OffsetFe
 		}
 		lowReq.TopicReqList[i] = lowTopicReq
 	}
-	lowResp, err := service.OffsetFetch(ctx.Addr, s.kafkaImpl, lowReq)
+	lowResp, err := service.OffsetFetch(ctx.Addr, s.kafsarImpl, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

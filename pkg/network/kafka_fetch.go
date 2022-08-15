@@ -51,7 +51,7 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 		}
 		lowReq.FetchTopicReqList[i] = lowTopicReq
 	}
-	lowTopicRespList, err := service.Fetch(ctx.Addr, s.kafkaImpl, lowReq)
+	lowTopicRespList, err := service.Fetch(ctx.Addr, s.kafsarImpl, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

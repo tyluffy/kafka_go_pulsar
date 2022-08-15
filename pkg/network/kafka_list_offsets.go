@@ -47,7 +47,7 @@ func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, req *codec.ListOffs
 		}
 		lowOffsetReqList[i] = lowTopicReq
 	}
-	lowOffsetRespList, err := service.Offset(ctx.Addr, s.kafkaImpl, lowOffsetReqList)
+	lowOffsetRespList, err := service.Offset(ctx.Addr, s.kafsarImpl, lowOffsetReqList)
 	if err != nil {
 		return nil, gnet.Close
 	}

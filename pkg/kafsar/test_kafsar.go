@@ -27,11 +27,11 @@ func SetupKafsar() (*Broker, int) {
 	if err != nil {
 		panic(err)
 	}
-	broker, err := setupKafsarInternal(port)
+	kafsarImpl, err := setupKafsarInternal(port)
 	if err != nil {
 		panic(err)
 	}
-	return broker, port
+	return kafsarImpl, port
 }
 
 func setupKafsarInternal(port int) (*Broker, error) {
@@ -57,6 +57,13 @@ func setupKafsarInternal(port int) (*Broker, error) {
 	config.KafsarConfig.PulsarNamespace = "default"
 	config.KafsarConfig.OffsetTopic = "kafka_offset"
 	kafsarImpl := &test.KafsarImpl{}
-	server := NewKafsarServer(config, kafsarImpl)
-	return server, server.Run()
+	server, err := NewKafsar(kafsarImpl, config)
+	if err != nil {
+		return nil, err
+	}
+	err = server.Run()
+	if err != nil {
+		return nil, err
+	}
+	return server, err
 }

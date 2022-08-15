@@ -57,8 +57,11 @@ func main() {
 	config.KafsarConfig.RebalanceTickMs = 100
 	config.TraceConfig.DisableTracing = true
 	e := &ItKafsaImpl{}
-	server := kafsar.NewKafsarServer(config, e)
-	err := server.Run()
+	impl, err := kafsar.NewKafsar(e, config)
+	if err != nil {
+		panic(err)
+	}
+	err = impl.Run()
 	if err != nil {
 		panic(err)
 	}

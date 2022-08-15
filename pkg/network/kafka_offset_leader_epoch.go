@@ -45,7 +45,7 @@ func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, req *codec
 		}
 		lowReqList[i] = lowTopicReq
 	}
-	lowTopicRespList, err := service.OffsetLeaderEpoch(ctx.Addr, s.kafkaImpl, lowReqList)
+	lowTopicRespList, err := service.OffsetLeaderEpoch(ctx.Addr, s.kafsarImpl, lowReqList)
 	if err != nil {
 		return nil, gnet.Close
 	}

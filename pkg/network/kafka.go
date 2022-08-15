@@ -34,17 +34,23 @@ var connCount int32
 
 var connMutex sync.Mutex
 
-func Run(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl service.KfsarServer) (*Server, error) {
+func NewServer(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl service.KfsarServer) (*Server, error) {
 	server := &Server{
 		kafkaProtocolConfig: kfkProtocolConfig,
-		kafkaImpl:           impl,
+		kafsarImpl:          impl,
 	}
 	server.kafkaServer = kgnet.NewKafkaServer(*config, server)
-	go func() {
-		err := server.kafkaServer.Run()
-		logrus.Error("kafsar broker started error ", err)
-	}()
 	return server, nil
+}
+
+func (s *Server) Run() error {
+	go func() {
+		err := s.kafkaServer.Run()
+		if err != nil {
+			logrus.Error("kafsar broker started error ", err)
+		}
+	}()
+	return nil
 }
 
 func (s *Server) Close(ctx context.Context) (err error) {
@@ -69,7 +75,7 @@ func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 
 func (s *Server) OnClosed(c gnet.Conn, err error) (action gnet.Action) {
 	logrus.Info("connection closed from ", c.RemoteAddr())
-	s.kafkaImpl.Disconnect(c.RemoteAddr())
+	s.kafsarImpl.Disconnect(c.RemoteAddr())
 	s.ConnMap.Delete(c.RemoteAddr())
 	s.SaslMap.Delete(c.RemoteAddr())
 	atomic.AddInt32(&connCount, -1)
@@ -281,6 +287,6 @@ type Server struct {
 	ConnMap             sync.Map
 	SaslMap             sync.Map
 	kafkaProtocolConfig *KafkaProtocolConfig
-	kafkaImpl           service.KfsarServer
+	kafsarImpl          service.KfsarServer
 	kafkaServer         *kgnet.KafkaServer
 }

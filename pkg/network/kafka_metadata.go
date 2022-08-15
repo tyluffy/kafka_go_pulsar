@@ -33,7 +33,7 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 	}
 	topic := topics[0].Topic
 	var metadataResp = &codec.MetadataResp{}
-	partitionNum, err := s.kafkaImpl.PartitionNum(ctx.Addr, topic)
+	partitionNum, err := s.kafsarImpl.PartitionNum(ctx.Addr, topic)
 	if err != nil {
 		metadataResp.CorrelationId = req.CorrelationId
 		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
