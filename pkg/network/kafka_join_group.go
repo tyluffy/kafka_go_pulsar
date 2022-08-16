@@ -29,43 +29,23 @@ func (s *Server) ReactJoinGroup(ctx *ctx.NetworkContext, req *codec.JoinGroupReq
 		return nil, gnet.Close
 	}
 	logrus.Debug("join group req", req)
-	lowReq := &codec.JoinGroupReq{}
-	lowReq.ClientId = req.ClientId
-	lowReq.GroupId = req.GroupId
-	lowReq.SessionTimeout = req.SessionTimeout
-	lowReq.MemberId = req.MemberId
-	lowReq.GroupInstanceId = req.GroupInstanceId
-	lowReq.ProtocolType = req.ProtocolType
-	lowReq.GroupProtocols = make([]*codec.GroupProtocol, len(req.GroupProtocols))
-	for i, groupProtocol := range req.GroupProtocols {
-		g := &codec.GroupProtocol{}
-		g.ProtocolName = groupProtocol.ProtocolName
-		g.ProtocolMetadata = groupProtocol.ProtocolMetadata
-		lowReq.GroupProtocols[i] = g
+	lowResp, err := s.kafsarImpl.GroupJoin(ctx.Addr, req)
+	if err != nil {
+		return nil, gnet.Close
 	}
 	resp := &codec.JoinGroupResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
+		ErrorCode:    lowResp.ErrorCode,
+		GenerationId: lowResp.GenerationId,
+		ProtocolType: lowResp.ProtocolType,
+		ProtocolName: lowResp.ProtocolName,
+		LeaderId:     lowResp.LeaderId,
+		MemberId:     lowResp.MemberId,
+		Members:      lowResp.Members,
 	}
-	lowResp, err := s.kafsarImpl.GroupJoin(ctx.Addr, lowReq)
-	if err != nil {
-		return nil, gnet.Close
-	}
+
 	logrus.Debug("resp ", resp)
-	resp.ErrorCode = lowResp.ErrorCode
-	resp.GenerationId = lowResp.GenerationId
-	resp.ProtocolType = lowResp.ProtocolType
-	resp.ProtocolName = lowResp.ProtocolName
-	resp.LeaderId = lowResp.LeaderId
-	resp.MemberId = lowResp.MemberId
-	resp.Members = make([]*codec.Member, len(lowResp.Members))
-	for i, lowMember := range lowResp.Members {
-		m := &codec.Member{}
-		m.MemberId = lowMember.MemberId
-		m.GroupInstanceId = lowMember.GroupInstanceId
-		m.Metadata = lowMember.Metadata
-		resp.Members[i] = m
-	}
 	return resp, gnet.None
 }

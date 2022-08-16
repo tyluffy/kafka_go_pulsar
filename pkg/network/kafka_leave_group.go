@@ -29,33 +29,18 @@ func (s *Server) ReactLeaveGroup(ctx *ctx.NetworkContext, req *codec.LeaveGroupR
 		return nil, gnet.Close
 	}
 	logrus.Debug("leave group req ", req)
-	lowReq := &codec.LeaveGroupReq{}
-	lowReq.GroupId = req.GroupId
-	lowReq.ClientId = req.ClientId
-	lowReq.Members = make([]*codec.LeaveGroupMember, len(req.Members))
-	for i, member := range req.Members {
-		m := &codec.LeaveGroupMember{}
-		m.MemberId = member.MemberId
-		m.GroupInstanceId = member.GroupInstanceId
-		lowReq.Members[i] = m
-	}
-	resp := &codec.LeaveGroupResp{
-		BaseResp: codec.BaseResp{
-			CorrelationId: req.CorrelationId,
-		},
-	}
-	lowResp, err := s.kafsarImpl.GroupLeave(ctx.Addr, lowReq)
+
+	lowResp, err := s.kafsarImpl.GroupLeave(ctx.Addr, req)
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp.ErrorCode = lowResp.ErrorCode
-	resp.Members = make([]*codec.LeaveGroupMember, len(lowResp.Members))
-	for i, member := range lowResp.Members {
-		m := &codec.LeaveGroupMember{}
-		m.MemberId = member.MemberId
-		m.GroupInstanceId = member.GroupInstanceId
-		resp.Members[i] = m
-	}
-	resp.MemberErrorCode = lowResp.MemberErrorCode
-	return resp, gnet.None
+	return &codec.LeaveGroupResp{
+		BaseResp: codec.BaseResp{
+			CorrelationId: req.CorrelationId,
+		},
+		ErrorCode:       lowResp.ErrorCode,
+		ThrottleTime:    0,
+		Members:         lowResp.Members,
+		MemberErrorCode: lowResp.MemberErrorCode,
+	}, gnet.None
 }

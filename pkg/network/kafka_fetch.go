@@ -40,13 +40,7 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 		}
 		lowTopicReq := &codec.FetchTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*codec.FetchPartitionReq, len(topicReq.PartitionReqList))
-		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &codec.FetchPartitionReq{}
-			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.FetchOffset = partitionReq.FetchOffset
-			lowTopicReq.PartitionReqList[j] = lowPartitionReq
-		}
+		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
 		lowReq.ClientId = req.ClientId
 		lowReq.TopicReqList[i] = lowTopicReq
 	}

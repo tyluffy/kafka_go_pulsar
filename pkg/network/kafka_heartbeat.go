@@ -26,18 +26,11 @@ import (
 
 func (s *Server) ReactHeartbeat(heartbeatReqV4 *codec.HeartbeatReq, context *ctx.NetworkContext) (*codec.HeartbeatResp, gnet.Action) {
 	logrus.Debug("heart beat req ", heartbeatReqV4)
-	heartBeatResp := &codec.HeartbeatResp{
+	beat := s.kafsarImpl.HeartBeat(context.Addr, *heartbeatReqV4)
+	return &codec.HeartbeatResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: heartbeatReqV4.CorrelationId,
 		},
-	}
-	req := codec.HeartbeatReq{}
-	req.ClientId = heartbeatReqV4.ClientId
-	req.GenerationId = heartbeatReqV4.GenerationId
-	req.GroupInstanceId = heartbeatReqV4.GroupInstanceId
-	req.MemberId = heartbeatReqV4.MemberId
-	req.GroupId = heartbeatReqV4.GroupId
-	beat := s.kafsarImpl.HeartBeat(context.Addr, req)
-	heartBeatResp.ErrorCode = beat.ErrorCode
-	return heartBeatResp, gnet.None
+		ErrorCode: beat.ErrorCode,
+	}, gnet.None
 }

@@ -38,60 +38,18 @@ func (s *Server) ReactProduce(ctx *ctx.NetworkContext, req *codec.ProduceReq, co
 		}
 		lowTopicReq := &codec.ProduceTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*codec.ProducePartitionReq, len(topicReq.PartitionReqList))
-		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &codec.ProducePartitionReq{}
-			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.RecordBatch = s.convertRecordBatchReq(partitionReq.RecordBatch)
-			lowTopicReq.PartitionReqList[j] = lowPartitionReq
-		}
-		lowReq.ClientId = req.ClientId
+		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
 		lowReq.TopicReqList[i] = lowTopicReq
 	}
+	lowReq.ClientId = req.ClientId
 	lowResp, err := service.Produce(ctx.Addr, s.kafsarImpl, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp := &codec.ProduceResp{
+	return &codec.ProduceResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
-	}
-	resp.TopicRespList = make([]*codec.ProduceTopicResp, len(lowResp.TopicRespList))
-	for i, lowTopicResp := range lowResp.TopicRespList {
-		f := &codec.ProduceTopicResp{}
-		f.Topic = lowTopicResp.Topic
-		f.PartitionRespList = make([]*codec.ProducePartitionResp, len(lowTopicResp.PartitionRespList))
-		for j, p := range lowTopicResp.PartitionRespList {
-			partitionResp := &codec.ProducePartitionResp{}
-			partitionResp.PartitionId = p.PartitionId
-			partitionResp.ErrorCode = p.ErrorCode
-			partitionResp.Offset = p.Offset
-			partitionResp.Time = p.Time
-			partitionResp.LogStartOffset = p.LogStartOffset
-			f.PartitionRespList[j] = partitionResp
-		}
-		resp.TopicRespList[i] = f
-	}
-	return resp, gnet.None
-}
-
-func (s *Server) convertRecordBatchReq(recordBatch *codec.RecordBatch) *codec.RecordBatch {
-	lowRecordBatch := &codec.RecordBatch{}
-	lowRecordBatch.Offset = recordBatch.Offset
-	lowRecordBatch.LastOffsetDelta = recordBatch.LastOffsetDelta
-	lowRecordBatch.FirstTimestamp = recordBatch.FirstTimestamp
-	lowRecordBatch.LastTimestamp = recordBatch.LastTimestamp
-	lowRecordBatch.BaseSequence = recordBatch.BaseSequence
-	lowRecordBatch.Records = make([]*codec.Record, len(recordBatch.Records))
-	for i, r := range recordBatch.Records {
-		record := &codec.Record{}
-		record.RelativeTimestamp = r.RelativeTimestamp
-		record.RelativeOffset = r.RelativeOffset
-		record.Key = r.Key
-		record.Value = r.Value
-		record.Headers = r.Headers
-		lowRecordBatch.Records[i] = record
-	}
-	return lowRecordBatch
+		TopicRespList: lowResp.TopicRespList,
+	}, gnet.None
 }

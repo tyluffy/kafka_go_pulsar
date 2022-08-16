@@ -35,39 +35,18 @@ func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, req *codec
 		}
 		lowTopicReq := &codec.OffsetLeaderEpochTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*codec.OffsetLeaderEpochPartitionReq, len(topicReq.PartitionReqList))
-		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &codec.OffsetLeaderEpochPartitionReq{}
-			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.CurrentLeaderEpoch = partitionReq.CurrentLeaderEpoch
-			lowPartitionReq.LeaderEpoch = partitionReq.LeaderEpoch
-			lowTopicReq.PartitionReqList[j] = lowPartitionReq
-		}
+		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
 		lowReqList[i] = lowTopicReq
 	}
 	lowTopicRespList, err := service.OffsetLeaderEpoch(ctx.Addr, s.kafsarImpl, lowReqList)
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp := &codec.OffsetForLeaderEpochResp{
+	return &codec.OffsetForLeaderEpochResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
-	}
-	resp.TopicRespList = make([]*codec.OffsetForLeaderEpochTopicResp, len(lowTopicRespList))
-	for i, lowTopicResp := range lowTopicRespList {
-		f := &codec.OffsetForLeaderEpochTopicResp{}
-		f.Topic = lowTopicResp.Topic
-		f.PartitionRespList = make([]*codec.OffsetForLeaderEpochPartitionResp, len(lowTopicResp.PartitionRespList))
-		for j, p := range lowTopicResp.PartitionRespList {
-			partitionResp := &codec.OffsetForLeaderEpochPartitionResp{}
-			partitionResp.ErrorCode = p.ErrorCode
-			partitionResp.PartitionId = p.PartitionId
-			partitionResp.LeaderEpoch = p.LeaderEpoch
-			partitionResp.Offset = p.Offset
-			f.PartitionRespList[j] = partitionResp
-		}
-		resp.TopicRespList[i] = f
-	}
-	return resp, gnet.None
+		ThrottleTime:  0,
+		TopicRespList: lowTopicRespList,
+	}, gnet.None
 }

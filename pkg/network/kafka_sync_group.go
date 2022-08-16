@@ -29,32 +29,18 @@ func (s *Server) ReactSyncGroup(ctx *ctx.NetworkContext, req *codec.SyncGroupReq
 		return nil, gnet.Close
 	}
 	logrus.Debug("sync group req", req)
-	lowReq := &codec.SyncGroupReq{}
-	lowReq.GroupId = req.GroupId
-	lowReq.ClientId = req.ClientId
-	lowReq.GenerationId = req.GenerationId
-	lowReq.MemberId = req.MemberId
-	lowReq.GroupInstanceId = req.GroupInstanceId
-	lowReq.ProtocolType = req.ProtocolType
-	lowReq.ProtocolName = req.ProtocolName
-	lowReq.GroupAssignments = make([]*codec.GroupAssignment, len(req.GroupAssignments))
-	for i, groupAssignment := range req.GroupAssignments {
-		g := &codec.GroupAssignment{}
-		g.MemberAssignment = groupAssignment.MemberAssignment
-		g.MemberId = groupAssignment.MemberId
-		lowReq.GroupAssignments[i] = g
-	}
-	resp := &codec.SyncGroupResp{
-		BaseResp: codec.BaseResp{
-			CorrelationId: req.CorrelationId,
-		},
-	}
-	lowResp, err := s.kafsarImpl.GroupSync(ctx.Addr, lowReq)
+	lowResp, err := s.kafsarImpl.GroupSync(ctx.Addr, req)
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp.ProtocolType = lowResp.ProtocolType
-	resp.ProtocolName = lowResp.ProtocolName
-	resp.MemberAssignment = lowResp.MemberAssignment
-	return resp, gnet.None
+	return &codec.SyncGroupResp{
+		BaseResp: codec.BaseResp{
+			CorrelationId: req.CorrelationId,
+		},
+		ThrottleTime:     lowResp.ThrottleTime,
+		ErrorCode:        lowResp.ErrorCode,
+		ProtocolType:     lowResp.ProtocolType,
+		ProtocolName:     lowResp.ProtocolName,
+		MemberAssignment: lowResp.MemberAssignment,
+	}, gnet.None
 }
