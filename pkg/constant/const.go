@@ -29,7 +29,7 @@ const (
 	OffsetReaderEarliestName = "OFFSET_LIST_EARLIEST"
 
 	DefaultProducerSendTimeout = 1 * time.Second
-	DefaultMaxPendingMs        = 100
+	DefaultMaxPendingMsg       = 100
 
 	PartitionSuffixFormat = "-partition-%d"
 )

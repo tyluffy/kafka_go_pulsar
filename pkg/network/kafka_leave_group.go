@@ -56,6 +56,6 @@ func (s *Server) ReactLeaveGroup(ctx *ctx.NetworkContext, req *codec.LeaveGroupR
 		m.GroupInstanceId = member.GroupInstanceId
 		resp.Members[i] = m
 	}
-	resp.MemberErrorCode = int16(lowResp.MemberErrorCode)
+	resp.MemberErrorCode = lowResp.MemberErrorCode
 	return resp, gnet.None
 }

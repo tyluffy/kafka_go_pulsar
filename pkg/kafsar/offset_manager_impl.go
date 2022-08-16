@@ -222,7 +222,7 @@ func getOffsetProducer(client pulsar.Client, config KafsarConfig) (pulsar.Produc
 	options := pulsar.ProducerOptions{}
 	options.Topic = getOffsetTopic(config)
 	options.SendTimeout = constant.DefaultProducerSendTimeout
-	options.MaxPendingMessages = constant.DefaultMaxPendingMs
+	options.MaxPendingMessages = constant.DefaultMaxPendingMsg
 	options.DisableBlockIfQueueFull = true
 	producer, err := client.CreateProducer(options)
 	if err != nil {

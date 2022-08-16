@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -51,7 +50,7 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 		lowReq.ClientId = req.ClientId
 		lowReq.TopicReqList[i] = lowTopicReq
 	}
-	lowTopicRespList, err := service.Fetch(ctx.Addr, s.kafsarImpl, lowReq)
+	lowTopicRespList, err := s.kafsarImpl.Fetch(ctx.Addr, lowReq)
 	if err != nil {
 		return nil, gnet.Close
 	}

@@ -31,7 +31,7 @@ func (s *Server) ReactFindCoordinator(req *codec.FindCoordinatorReq, config *Kaf
 		},
 		NodeId: config.NodeId,
 		Host:   config.AdvertiseHost,
-		Port:   int(config.AdvertisePort),
+		Port:   config.AdvertisePort,
 	}
 	logrus.Debug("resp ", resp)
 	return resp, gnet.None

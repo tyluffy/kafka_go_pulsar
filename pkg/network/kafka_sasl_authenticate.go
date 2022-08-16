@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -33,7 +32,7 @@ func (s *Server) ReactSaslHandshakeAuth(req *codec.SaslAuthenticateReq, context 
 		},
 	}
 	saslReq := codec.SaslAuthenticateReq{Username: req.Username, Password: req.Password, BaseReq: codec.BaseReq{ClientId: req.ClientId}}
-	authResult, errorCode := service.SaslAuth(context.Addr, s.kafsarImpl, saslReq)
+	authResult, errorCode := s.kafsarImpl.SaslAuth(context.Addr, saslReq)
 	if errorCode != 0 {
 		return nil, gnet.Close
 	}

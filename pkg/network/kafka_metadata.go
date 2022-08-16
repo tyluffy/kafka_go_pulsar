@@ -37,7 +37,7 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 	if err != nil {
 		metadataResp.CorrelationId = req.CorrelationId
 		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
+		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil}
 		metadataResp.ClusterId = config.ClusterId
 		metadataResp.ControllerId = config.NodeId
 		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
@@ -48,7 +48,7 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 	} else {
 		metadataResp.CorrelationId = req.CorrelationId
 		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: int(config.AdvertisePort), Rack: nil}
+		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil}
 		metadataResp.ClusterId = config.ClusterId
 		metadataResp.ControllerId = config.NodeId
 		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
