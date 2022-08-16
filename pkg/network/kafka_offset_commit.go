@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -30,24 +29,28 @@ func (s *Server) OffsetCommitVersion(ctx *ctx.NetworkContext, req *codec.OffsetC
 		return nil, gnet.Close
 	}
 	logrus.Debug("offset commit req ", req)
-	lowReqList := make([]*codec.OffsetCommitTopicReq, len(req.TopicReqList))
+	resp := make([]*codec.OffsetCommitTopicResp, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &codec.OffsetCommitTopicReq{}
-		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
-		lowReqList[i] = lowTopicReq
-	}
-	lowTopicRespList, err := service.OffsetCommit(ctx.Addr, req.ClientId, s.kafsarImpl, lowReqList)
-	if err != nil {
-		return nil, gnet.Close
+		f := &codec.OffsetCommitTopicResp{
+			Topic:             topicReq.Topic,
+			PartitionRespList: make([]*codec.OffsetCommitPartitionResp, len(topicReq.PartitionReqList)),
+		}
+		for j, partitionReq := range topicReq.PartitionReqList {
+			var err error
+			f.PartitionRespList[j], err = s.kafsarImpl.OffsetCommitPartition(ctx.Addr, topicReq.Topic, req.ClientId, partitionReq)
+			if err != nil {
+				return nil, gnet.Close
+			}
+		}
+		resp[i] = f
 	}
 	return &codec.OffsetCommitResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
-		TopicRespList: lowTopicRespList,
+		TopicRespList: resp,
 	}, gnet.None
 }

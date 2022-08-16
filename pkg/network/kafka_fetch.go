@@ -74,27 +74,18 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 }
 
 func (s *Server) convertRecordBatchResp(lowRecordBatch *codec.RecordBatch) *codec.RecordBatch {
-	recordBatch := &codec.RecordBatch{}
-	recordBatch.Offset = lowRecordBatch.Offset
-	recordBatch.LeaderEpoch = 0
-	recordBatch.MagicByte = 2
-	recordBatch.Flags = 0
-	recordBatch.LastOffsetDelta = lowRecordBatch.LastOffsetDelta
-	recordBatch.FirstTimestamp = lowRecordBatch.FirstTimestamp
-	recordBatch.LastTimestamp = lowRecordBatch.LastTimestamp
-	recordBatch.ProducerId = -1
-	recordBatch.ProducerEpoch = -1
-	recordBatch.BaseSequence = lowRecordBatch.BaseSequence
-	recordBatch.Records = make([]*codec.Record, len(lowRecordBatch.Records))
-	for i, r := range lowRecordBatch.Records {
-		record := &codec.Record{}
-		record.RecordAttributes = 0
-		record.RelativeTimestamp = r.RelativeTimestamp
-		record.RelativeOffset = r.RelativeOffset
-		record.Key = r.Key
-		record.Value = r.Value
-		record.Headers = r.Headers
-		recordBatch.Records[i] = record
+	return &codec.RecordBatch{
+		Offset:          lowRecordBatch.Offset,
+		MessageSize:     lowRecordBatch.MessageSize,
+		LeaderEpoch:     lowRecordBatch.LeaderEpoch,
+		MagicByte:       2,
+		Flags:           0,
+		LastOffsetDelta: lowRecordBatch.LastOffsetDelta,
+		FirstTimestamp:  lowRecordBatch.FirstTimestamp,
+		LastTimestamp:   lowRecordBatch.LastTimestamp,
+		ProducerId:      -1,
+		ProducerEpoch:   -1,
+		BaseSequence:    lowRecordBatch.BaseSequence,
+		Records:         lowRecordBatch.Records,
 	}
-	return recordBatch
 }

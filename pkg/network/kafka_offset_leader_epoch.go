@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 )
@@ -28,25 +27,31 @@ func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, req *codec
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
-	lowReqList := make([]*codec.OffsetLeaderEpochTopicReq, len(req.TopicReqList))
+	resp := make([]*codec.OffsetForLeaderEpochTopicResp, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &codec.OffsetLeaderEpochTopicReq{}
-		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
-		lowReqList[i] = lowTopicReq
+		f := &codec.OffsetForLeaderEpochTopicResp{
+			Topic:             topicReq.Topic,
+			PartitionRespList: make([]*codec.OffsetForLeaderEpochPartitionResp, 0),
+		}
+		for _, partitionReq := range topicReq.PartitionReqList {
+			partition, err := s.kafsarImpl.OffsetLeaderEpoch(ctx.Addr, topicReq.Topic, partitionReq)
+			if err != nil {
+				return nil, gnet.Close
+			}
+			if partition != nil {
+				f.PartitionRespList = append(f.PartitionRespList, partition)
+			}
+		}
+		resp[i] = f
 	}
-	lowTopicRespList, err := service.OffsetLeaderEpoch(ctx.Addr, s.kafsarImpl, lowReqList)
-	if err != nil {
-		return nil, gnet.Close
-	}
+
 	return &codec.OffsetForLeaderEpochResp{
 		BaseResp: codec.BaseResp{
 			CorrelationId: req.CorrelationId,
 		},
-		ThrottleTime:  0,
-		TopicRespList: lowTopicRespList,
+		TopicRespList: resp,
 	}, gnet.None
 }

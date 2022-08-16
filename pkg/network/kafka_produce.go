@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -30,26 +29,30 @@ func (s *Server) ReactProduce(ctx *ctx.NetworkContext, req *codec.ProduceReq, co
 		return nil, gnet.Close
 	}
 	logrus.Debug("produce req ", req)
-	lowReq := &codec.ProduceReq{}
-	lowReq.TopicReqList = make([]*codec.ProduceTopicReq, len(req.TopicReqList))
+	result := &codec.ProduceResp{
+		BaseResp: codec.BaseResp{
+			CorrelationId: req.CorrelationId,
+		},
+		TopicRespList: make([]*codec.ProduceTopicResp, len(req.TopicReqList)),
+	}
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, PRODUCER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &codec.ProduceTopicReq{}
-		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
-		lowReq.TopicReqList[i] = lowTopicReq
+		f := &codec.ProduceTopicResp{
+			Topic:             topicReq.Topic,
+			PartitionRespList: make([]*codec.ProducePartitionResp, 0),
+		}
+		for _, partitionReq := range topicReq.PartitionReqList {
+			partition, err := s.kafsarImpl.Produce(ctx.Addr, topicReq.Topic, partitionReq.PartitionId, partitionReq)
+			if err != nil {
+				return nil, gnet.Close
+			}
+			if partition != nil {
+				f.PartitionRespList = append(f.PartitionRespList, partition)
+			}
+		}
+		result.TopicRespList[i] = f
 	}
-	lowReq.ClientId = req.ClientId
-	lowResp, err := service.Produce(ctx.Addr, s.kafsarImpl, lowReq)
-	if err != nil {
-		return nil, gnet.Close
-	}
-	return &codec.ProduceResp{
-		BaseResp: codec.BaseResp{
-			CorrelationId: req.CorrelationId,
-		},
-		TopicRespList: lowResp.TopicRespList,
-	}, gnet.None
+	return result, gnet.None
 }

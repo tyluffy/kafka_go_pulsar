@@ -24,7 +24,6 @@ import (
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/network"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/paashzj/kafka_go_pulsar/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
@@ -109,7 +108,7 @@ func NewKafsar(impl Server, config *Config) (*Broker, error) {
 	kfkProtocolConfig.AdvertisePort = config.KafsarConfig.AdvertisePort
 	kfkProtocolConfig.NeedSasl = config.KafsarConfig.NeedSasl
 	kfkProtocolConfig.MaxConn = config.KafsarConfig.MaxConn
-	var aux service.KafsarServer = &broker
+	var aux network.KafsarServer = &broker
 	broker.kafkaServer, err = network.NewServer(&config.KafsarConfig.GnetConfig, kfkProtocolConfig, aux)
 	if err != nil {
 		return nil, err

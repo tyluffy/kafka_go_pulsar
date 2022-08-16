@@ -20,21 +20,62 @@ package network
 import (
 	"context"
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 	"github.com/sirupsen/logrus"
+	"net"
 	"sync"
 	"sync/atomic"
 )
+
+type KafsarServer interface {
+	PartitionNum(addr net.Addr, topic string) (int, error)
+
+	// Fetch method called this already authed
+	Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicResp, error)
+
+	// GroupJoin method called this already authed
+	GroupJoin(addr net.Addr, req *codec.JoinGroupReq) (*codec.JoinGroupResp, error)
+
+	// GroupLeave method called this already authed
+	GroupLeave(addr net.Addr, req *codec.LeaveGroupReq) (*codec.LeaveGroupResp, error)
+
+	// GroupSync method called this already authed
+	GroupSync(addr net.Addr, req *codec.SyncGroupReq) (*codec.SyncGroupResp, error)
+
+	// OffsetListPartition method called this already authed
+	OffsetListPartition(addr net.Addr, topic, clientID string, req *codec.ListOffsetsPartition) (*codec.ListOffsetsPartitionResp, error)
+
+	// OffsetCommitPartition method called this already authed
+	OffsetCommitPartition(addr net.Addr, topic, clientID string, req *codec.OffsetCommitPartitionReq) (*codec.OffsetCommitPartitionResp, error)
+
+	// OffsetFetch method called this already authed
+	OffsetFetch(addr net.Addr, topic, clientID, groupID string, req *codec.OffsetFetchPartitionReq) (*codec.OffsetFetchPartitionResp, error)
+
+	// OffsetLeaderEpoch method called this already authed
+	OffsetLeaderEpoch(addr net.Addr, topic string, req *codec.OffsetLeaderEpochPartitionReq) (*codec.OffsetForLeaderEpochPartitionResp, error)
+
+	// Produce method called this already authed
+	Produce(addr net.Addr, topic string, partition int, req *codec.ProducePartitionReq) (*codec.ProducePartitionResp, error)
+
+	SaslAuth(addr net.Addr, req codec.SaslAuthenticateReq) (bool, codec.ErrorCode)
+
+	SaslAuthTopic(addr net.Addr, req codec.SaslAuthenticateReq, topic, permissionType string) (bool, codec.ErrorCode)
+
+	SaslAuthConsumerGroup(addr net.Addr, req codec.SaslAuthenticateReq, consumerGroup string) (bool, codec.ErrorCode)
+
+	HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.HeartbeatResp
+
+	Disconnect(addr net.Addr)
+}
 
 // connCount kafka connection count
 var connCount int32
 
 var connMutex sync.Mutex
 
-func NewServer(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl service.KafsarServer) (*Server, error) {
+func NewServer(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl KafsarServer) (*Server, error) {
 	server := &Server{
 		kafkaProtocolConfig: kfkProtocolConfig,
 		kafsarImpl:          impl,
@@ -287,6 +328,6 @@ type Server struct {
 	ConnMap             sync.Map
 	SaslMap             sync.Map
 	kafkaProtocolConfig *KafkaProtocolConfig
-	kafsarImpl          service.KafsarServer
+	kafsarImpl          KafsarServer
 	kafkaServer         *kgnet.KafkaServer
 }
