@@ -190,6 +190,7 @@ func TestHandleJoinGroupMultiMember(t *testing.T) {
 		oneMemberRebalanceHandler(t, groupCoordinator, waitGroup)
 	}()
 	waitGroup.Wait()
+	time.Sleep(3 * time.Second)
 	group, err := groupCoordinator.GetGroup(testUsername, groupId)
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +222,7 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 	assert.Nil(t, err)
 	waitGroup.Done()
 	for {
-		time.Sleep(3 * time.Second)
+		time.Sleep(time.Second)
 		// one member heartbeat
 		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
 		if heartBeatResp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
