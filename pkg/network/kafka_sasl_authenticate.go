@@ -32,7 +32,7 @@ func (s *Server) ReactSaslHandshakeAuth(req *codec.SaslAuthenticateReq, context 
 			CorrelationId: req.CorrelationId,
 		},
 	}
-	saslReq := service.SaslReq{Username: req.Username, Password: req.Password, ClientId: req.ClientId}
+	saslReq := codec.SaslAuthenticateReq{Username: req.Username, Password: req.Password, BaseReq: codec.BaseReq{ClientId: req.ClientId}}
 	authResult, errorCode := service.SaslAuth(context.Addr, s.kafsarImpl, saslReq)
 	if errorCode != 0 {
 		return nil, gnet.Close

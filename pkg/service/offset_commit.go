@@ -22,36 +22,18 @@ import (
 	"net"
 )
 
-type OffsetCommitTopicReq struct {
-	Topic   string
-	ReqList []*OffsetCommitPartitionReq
-}
-
-type OffsetCommitTopicResp struct {
-	Topic             string
-	PartitionRespList []*OffsetCommitPartitionResp
-}
-
-type OffsetCommitPartitionReq struct {
-	ClientId           string
-	PartitionId        int
-	OffsetCommitOffset int64
-}
-
-type OffsetCommitPartitionResp struct {
-	PartitionId int
-	ErrorCode   codec.ErrorCode
-}
-
-func OffsetCommit(addr net.Addr, impl KfsarServer, reqList []*OffsetCommitTopicReq) ([]*OffsetCommitTopicResp, error) {
-	result := make([]*OffsetCommitTopicResp, len(reqList))
+func OffsetCommit(addr net.Addr, clientID string, impl KafsarServer, reqList []*codec.OffsetCommitTopicReq) ([]*codec.OffsetCommitTopicResp, error) {
+	result := make([]*codec.OffsetCommitTopicResp, len(reqList))
+	var err error
 	for i, req := range reqList {
-		f := &OffsetCommitTopicResp{}
+		f := &codec.OffsetCommitTopicResp{}
 		f.Topic = req.Topic
-		f.PartitionRespList = make([]*OffsetCommitPartitionResp, len(req.ReqList))
-		for j, partitionReq := range req.ReqList {
-			// todo ignore error
-			f.PartitionRespList[j], _ = impl.OffsetCommitPartition(addr, req.Topic, partitionReq)
+		f.PartitionRespList = make([]*codec.OffsetCommitPartitionResp, len(req.PartitionReqList))
+		for j, partitionReq := range req.PartitionReqList {
+			f.PartitionRespList[j], err = impl.OffsetCommitPartition(addr, req.Topic, clientID, partitionReq)
+			if err != nil {
+				return nil, err
+			}
 		}
 		result[i] = f
 	}

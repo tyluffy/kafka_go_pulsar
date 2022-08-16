@@ -30,24 +30,23 @@ func (s *Server) OffsetCommitVersion(ctx *ctx.NetworkContext, req *codec.OffsetC
 		return nil, gnet.Close
 	}
 	logrus.Debug("offset commit req ", req)
-	lowReqList := make([]*service.OffsetCommitTopicReq, len(req.TopicReqList))
+	lowReqList := make([]*codec.OffsetCommitTopicReq, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &service.OffsetCommitTopicReq{}
+		lowTopicReq := &codec.OffsetCommitTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.ReqList = make([]*service.OffsetCommitPartitionReq, len(topicReq.PartitionReqList))
+		lowTopicReq.PartitionReqList = make([]*codec.OffsetCommitPartitionReq, len(topicReq.PartitionReqList))
 		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &service.OffsetCommitPartitionReq{}
+			lowPartitionReq := &codec.OffsetCommitPartitionReq{}
 			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.OffsetCommitOffset = partitionReq.Offset
-			lowPartitionReq.ClientId = req.ClientId
-			lowTopicReq.ReqList[j] = lowPartitionReq
+			lowPartitionReq.Offset = partitionReq.Offset
+			lowTopicReq.PartitionReqList[j] = lowPartitionReq
 		}
 		lowReqList[i] = lowTopicReq
 	}
-	lowTopicRespList, err := service.OffsetCommit(ctx.Addr, s.kafsarImpl, lowReqList)
+	lowTopicRespList, err := service.OffsetCommit(ctx.Addr, req.ClientId, s.kafsarImpl, lowReqList)
 	if err != nil {
 		return nil, gnet.Close
 	}
@@ -64,7 +63,7 @@ func (s *Server) OffsetCommitVersion(ctx *ctx.NetworkContext, req *codec.OffsetC
 		for j, p := range lowTopicResp.PartitionRespList {
 			partitionResp := &codec.OffsetCommitPartitionResp{}
 			partitionResp.PartitionId = p.PartitionId
-			partitionResp.ErrorCode = int16(p.ErrorCode)
+			partitionResp.ErrorCode = p.ErrorCode
 			f.PartitionRespList[j] = partitionResp
 		}
 		resp.TopicRespList[i] = f

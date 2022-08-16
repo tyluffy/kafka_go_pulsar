@@ -30,24 +30,23 @@ func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, req *codec.ListOffs
 		return nil, gnet.Close
 	}
 	logrus.Debug("list offset req ", req)
-	lowOffsetReqList := make([]*service.ListOffsetsTopicReq, len(req.TopicReqList))
+	lowOffsetReqList := make([]*codec.ListOffsetsTopic, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &service.ListOffsetsTopicReq{}
+		lowTopicReq := &codec.ListOffsetsTopic{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*service.ListOffsetsPartitionReq, len(topicReq.PartitionReqList))
+		lowTopicReq.PartitionReqList = make([]*codec.ListOffsetsPartition, len(topicReq.PartitionReqList))
 		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &service.ListOffsetsPartitionReq{}
+			lowPartitionReq := &codec.ListOffsetsPartition{}
 			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.ClientId = req.ClientId
 			lowPartitionReq.Time = partitionReq.Time
 			lowTopicReq.PartitionReqList[j] = lowPartitionReq
 		}
 		lowOffsetReqList[i] = lowTopicReq
 	}
-	lowOffsetRespList, err := service.Offset(ctx.Addr, s.kafsarImpl, lowOffsetReqList)
+	lowOffsetRespList, err := service.Offset(ctx.Addr, req.ClientId, s.kafsarImpl, lowOffsetReqList)
 	if err != nil {
 		return nil, gnet.Close
 	}
@@ -64,8 +63,8 @@ func (s *Server) ListOffsetsVersion(ctx *ctx.NetworkContext, req *codec.ListOffs
 		for j, p := range lowTopicResp.PartitionRespList {
 			partitionResp := &codec.ListOffsetsPartitionResp{}
 			partitionResp.PartitionId = p.PartitionId
-			partitionResp.ErrorCode = int16(p.ErrorCode)
-			partitionResp.Timestamp = p.Time
+			partitionResp.ErrorCode = p.ErrorCode
+			partitionResp.Timestamp = p.Timestamp
 			partitionResp.Offset = p.Offset
 			partitionResp.LeaderEpoch = 0
 			f.PartitionRespList[j] = partitionResp

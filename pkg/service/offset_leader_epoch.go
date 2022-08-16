@@ -17,47 +17,22 @@
 
 package service
 
-import "net"
+import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
+	"net"
+)
 
-type OffsetLeaderEpochReq struct {
-	TopicReqList []*OffsetLeaderEpochTopicReq
-}
-
-type OffsetLeaderEpochTopicReq struct {
-	Topic            string
-	PartitionReqList []*OffsetLeaderEpochPartitionReq
-}
-
-type OffsetLeaderEpochPartitionReq struct {
-	PartitionId        int
-	CurrentLeaderEpoch int32
-	LeaderEpoch        int32
-}
-
-type OffsetLeaderEpochResp struct {
-	TopicRespList []*OffsetLeaderEpochTopicResp
-}
-
-type OffsetLeaderEpochTopicResp struct {
-	Topic             string
-	PartitionRespList []*OffsetLeaderEpochPartitionResp
-}
-
-type OffsetLeaderEpochPartitionResp struct {
-	ErrorCode   int16
-	PartitionId int
-	LeaderEpoch int32
-	Offset      int64
-}
-
-func OffsetLeaderEpoch(addr net.Addr, impl KfsarServer, reqList []*OffsetLeaderEpochTopicReq) ([]*OffsetLeaderEpochTopicResp, error) {
-	respList := make([]*OffsetLeaderEpochTopicResp, len(reqList))
+func OffsetLeaderEpoch(addr net.Addr, impl KafsarServer, reqList []*codec.OffsetLeaderEpochTopicReq) ([]*codec.OffsetForLeaderEpochTopicResp, error) {
+	respList := make([]*codec.OffsetForLeaderEpochTopicResp, len(reqList))
 	for i, topicReq := range reqList {
-		f := &OffsetLeaderEpochTopicResp{}
+		f := &codec.OffsetForLeaderEpochTopicResp{}
 		f.Topic = topicReq.Topic
-		f.PartitionRespList = make([]*OffsetLeaderEpochPartitionResp, 0)
+		f.PartitionRespList = make([]*codec.OffsetForLeaderEpochPartitionResp, 0)
 		for _, partitionReq := range topicReq.PartitionReqList {
-			partition, _ := impl.OffsetLeaderEpoch(addr, topicReq.Topic, partitionReq)
+			partition, err := impl.OffsetLeaderEpoch(addr, topicReq.Topic, partitionReq)
+			if err != nil {
+				return nil, err
+			}
 			if partition != nil {
 				f.PartitionRespList = append(f.PartitionRespList, partition)
 			}

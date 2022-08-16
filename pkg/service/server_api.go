@@ -22,43 +22,43 @@ import (
 	"net"
 )
 
-type KfsarServer interface {
+type KafsarServer interface {
 	PartitionNum(addr net.Addr, topic string) (int, error)
 
 	// Fetch method called this already authed
-	Fetch(addr net.Addr, req *FetchReq) ([]*FetchTopicResp, error)
+	Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicResp, error)
 
 	// GroupJoin method called this already authed
-	GroupJoin(addr net.Addr, req *JoinGroupReq) (*JoinGroupResp, error)
+	GroupJoin(addr net.Addr, req *codec.JoinGroupReq) (*codec.JoinGroupResp, error)
 
 	// GroupLeave method called this already authed
-	GroupLeave(addr net.Addr, req *LeaveGroupReq) (*LeaveGroupResp, error)
+	GroupLeave(addr net.Addr, req *codec.LeaveGroupReq) (*codec.LeaveGroupResp, error)
 
 	// GroupSync method called this already authed
-	GroupSync(addr net.Addr, req *SyncGroupReq) (*SyncGroupResp, error)
+	GroupSync(addr net.Addr, req *codec.SyncGroupReq) (*codec.SyncGroupResp, error)
 
 	// OffsetListPartition method called this already authed
-	OffsetListPartition(addr net.Addr, topic string, req *ListOffsetsPartitionReq) (*ListOffsetsPartitionResp, error)
+	OffsetListPartition(addr net.Addr, topic, clientID string, req *codec.ListOffsetsPartition) (*codec.ListOffsetsPartitionResp, error)
 
 	// OffsetCommitPartition method called this already authed
-	OffsetCommitPartition(addr net.Addr, topic string, req *OffsetCommitPartitionReq) (*OffsetCommitPartitionResp, error)
+	OffsetCommitPartition(addr net.Addr, topic, clientID string, req *codec.OffsetCommitPartitionReq) (*codec.OffsetCommitPartitionResp, error)
 
 	// OffsetFetch method called this already authed
-	OffsetFetch(addr net.Addr, topic string, req *OffsetFetchPartitionReq) (*OffsetFetchPartitionResp, error)
+	OffsetFetch(addr net.Addr, topic, clientID, groupID string, req *codec.OffsetFetchPartitionReq) (*codec.OffsetFetchPartitionResp, error)
 
 	// OffsetLeaderEpoch method called this already authed
-	OffsetLeaderEpoch(addr net.Addr, topic string, req *OffsetLeaderEpochPartitionReq) (*OffsetLeaderEpochPartitionResp, error)
+	OffsetLeaderEpoch(addr net.Addr, topic string, req *codec.OffsetLeaderEpochPartitionReq) (*codec.OffsetForLeaderEpochPartitionResp, error)
 
 	// Produce method called this already authed
-	Produce(addr net.Addr, topic string, partition int, req *ProducePartitionReq) (*ProducePartitionResp, error)
+	Produce(addr net.Addr, topic string, partition int, req *codec.ProducePartitionReq) (*codec.ProducePartitionResp, error)
 
-	SaslAuth(addr net.Addr, req SaslReq) (bool, codec.ErrorCode)
+	SaslAuth(addr net.Addr, req codec.SaslAuthenticateReq) (bool, codec.ErrorCode)
 
-	SaslAuthTopic(addr net.Addr, req SaslReq, topic, permissionType string) (bool, codec.ErrorCode)
+	SaslAuthTopic(addr net.Addr, req codec.SaslAuthenticateReq, topic, permissionType string) (bool, codec.ErrorCode)
 
-	SaslAuthConsumerGroup(addr net.Addr, req SaslReq, consumerGroup string) (bool, codec.ErrorCode)
+	SaslAuthConsumerGroup(addr net.Addr, req codec.SaslAuthenticateReq, consumerGroup string) (bool, codec.ErrorCode)
 
-	HeartBeat(addr net.Addr, req HeartBeatReq) *HeartBeatResp
+	HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.HeartbeatResp
 
 	Disconnect(addr net.Addr)
 }

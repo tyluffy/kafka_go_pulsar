@@ -17,18 +17,20 @@
 
 package kafsar
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
+)
 
 type GroupCoordinator interface {
 	HandleJoinGroup(username, groupId, memberId, clientId, protocolType string, sessionTimeoutMs int,
-		protocols []*service.GroupProtocol) (*service.JoinGroupResp, error)
+		protocols []*codec.GroupProtocol) (*codec.JoinGroupResp, error)
 
 	HandleSyncGroup(username, groupId, memberId string, generation int,
-		groupAssignments []*service.GroupAssignment) (*service.SyncGroupResp, error)
+		groupAssignments []*codec.GroupAssignment) (*codec.SyncGroupResp, error)
 
-	HandleLeaveGroup(username, groupId string, members []*service.LeaveGroupMember) (*service.LeaveGroupResp, error)
+	HandleLeaveGroup(username, groupId string, members []*codec.LeaveGroupMember) (*codec.LeaveGroupResp, error)
 
-	HandleHeartBeat(username, groupId string) *service.HeartBeatResp
+	HandleHeartBeat(username, groupId string) *codec.HeartbeatResp
 
 	GetGroup(username, groupId string) (*Group, error)
 }

@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -30,16 +29,16 @@ func (s *Server) ReactJoinGroup(ctx *ctx.NetworkContext, req *codec.JoinGroupReq
 		return nil, gnet.Close
 	}
 	logrus.Debug("join group req", req)
-	lowReq := &service.JoinGroupReq{}
+	lowReq := &codec.JoinGroupReq{}
 	lowReq.ClientId = req.ClientId
 	lowReq.GroupId = req.GroupId
 	lowReq.SessionTimeout = req.SessionTimeout
 	lowReq.MemberId = req.MemberId
 	lowReq.GroupInstanceId = req.GroupInstanceId
 	lowReq.ProtocolType = req.ProtocolType
-	lowReq.GroupProtocols = make([]*service.GroupProtocol, len(req.GroupProtocols))
+	lowReq.GroupProtocols = make([]*codec.GroupProtocol, len(req.GroupProtocols))
 	for i, groupProtocol := range req.GroupProtocols {
-		g := &service.GroupProtocol{}
+		g := &codec.GroupProtocol{}
 		g.ProtocolName = groupProtocol.ProtocolName
 		g.ProtocolMetadata = groupProtocol.ProtocolMetadata
 		lowReq.GroupProtocols[i] = g
@@ -54,7 +53,7 @@ func (s *Server) ReactJoinGroup(ctx *ctx.NetworkContext, req *codec.JoinGroupReq
 		return nil, gnet.Close
 	}
 	logrus.Debug("resp ", resp)
-	resp.ErrorCode = int16(lowResp.ErrorCode)
+	resp.ErrorCode = lowResp.ErrorCode
 	resp.GenerationId = lowResp.GenerationId
 	resp.ProtocolType = lowResp.ProtocolType
 	resp.ProtocolName = lowResp.ProtocolName

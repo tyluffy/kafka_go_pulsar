@@ -22,12 +22,6 @@ import (
 	"net"
 )
 
-type SaslReq struct {
-	Username string
-	Password string
-	ClientId string
-}
-
-func SaslAuth(addr net.Addr, impl KfsarServer, req SaslReq) (bool, codec.ErrorCode) {
+func SaslAuth(addr net.Addr, impl KafsarServer, req codec.SaslAuthenticateReq) (bool, codec.ErrorCode) {
 	return impl.SaslAuth(addr, req)
 }

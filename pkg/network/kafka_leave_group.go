@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -30,12 +29,12 @@ func (s *Server) ReactLeaveGroup(ctx *ctx.NetworkContext, req *codec.LeaveGroupR
 		return nil, gnet.Close
 	}
 	logrus.Debug("leave group req ", req)
-	lowReq := &service.LeaveGroupReq{}
+	lowReq := &codec.LeaveGroupReq{}
 	lowReq.GroupId = req.GroupId
 	lowReq.ClientId = req.ClientId
-	lowReq.Members = make([]*service.LeaveGroupMember, len(req.Members))
+	lowReq.Members = make([]*codec.LeaveGroupMember, len(req.Members))
 	for i, member := range req.Members {
-		m := &service.LeaveGroupMember{}
+		m := &codec.LeaveGroupMember{}
 		m.MemberId = member.MemberId
 		m.GroupInstanceId = member.GroupInstanceId
 		lowReq.Members[i] = m
@@ -49,7 +48,7 @@ func (s *Server) ReactLeaveGroup(ctx *ctx.NetworkContext, req *codec.LeaveGroupR
 	if err != nil {
 		return nil, gnet.Close
 	}
-	resp.ErrorCode = int16(lowResp.ErrorCode)
+	resp.ErrorCode = lowResp.ErrorCode
 	resp.Members = make([]*codec.LeaveGroupMember, len(lowResp.Members))
 	for i, member := range lowResp.Members {
 		m := &codec.LeaveGroupMember{}

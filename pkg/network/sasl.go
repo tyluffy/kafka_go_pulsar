@@ -19,7 +19,7 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
 )
 
 func (s *Server) checkSasl(ctx *ctx.NetworkContext) bool {
@@ -38,7 +38,7 @@ func (s *Server) checkSaslGroup(ctx *ctx.NetworkContext, groupId string) bool {
 	if !ok {
 		return false
 	}
-	res, code := s.kafsarImpl.SaslAuthConsumerGroup(ctx.Addr, saslReq.(service.SaslReq), groupId)
+	res, code := s.kafsarImpl.SaslAuthConsumerGroup(ctx.Addr, saslReq.(codec.SaslAuthenticateReq), groupId)
 	if code != 0 || !res {
 		return false
 	}
@@ -53,7 +53,7 @@ func (s *Server) checkSaslTopic(ctx *ctx.NetworkContext, topic, permissionType s
 	if !ok {
 		return false
 	}
-	res, code := s.kafsarImpl.SaslAuthTopic(ctx.Addr, saslReq.(service.SaslReq), topic, permissionType)
+	res, code := s.kafsarImpl.SaslAuthTopic(ctx.Addr, saslReq.(codec.SaslAuthenticateReq), topic, permissionType)
 	if code != 0 || !res {
 		return false
 	}

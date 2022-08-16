@@ -30,22 +30,22 @@ func (s *Server) ReactProduce(ctx *ctx.NetworkContext, req *codec.ProduceReq, co
 		return nil, gnet.Close
 	}
 	logrus.Debug("produce req ", req)
-	lowReq := &service.ProduceReq{}
-	lowReq.TopicReqList = make([]*service.ProduceTopicReq, len(req.TopicReqList))
+	lowReq := &codec.ProduceReq{}
+	lowReq.TopicReqList = make([]*codec.ProduceTopicReq, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, PRODUCER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &service.ProduceTopicReq{}
+		lowTopicReq := &codec.ProduceTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*service.ProducePartitionReq, len(topicReq.PartitionReqList))
+		lowTopicReq.PartitionReqList = make([]*codec.ProducePartitionReq, len(topicReq.PartitionReqList))
 		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &service.ProducePartitionReq{}
+			lowPartitionReq := &codec.ProducePartitionReq{}
 			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.ClientId = req.ClientId
 			lowPartitionReq.RecordBatch = s.convertRecordBatchReq(partitionReq.RecordBatch)
 			lowTopicReq.PartitionReqList[j] = lowPartitionReq
 		}
+		lowReq.ClientId = req.ClientId
 		lowReq.TopicReqList[i] = lowTopicReq
 	}
 	lowResp, err := service.Produce(ctx.Addr, s.kafsarImpl, lowReq)
@@ -76,16 +76,16 @@ func (s *Server) ReactProduce(ctx *ctx.NetworkContext, req *codec.ProduceReq, co
 	return resp, gnet.None
 }
 
-func (s *Server) convertRecordBatchReq(recordBatch *codec.RecordBatch) *service.RecordBatch {
-	lowRecordBatch := &service.RecordBatch{}
+func (s *Server) convertRecordBatchReq(recordBatch *codec.RecordBatch) *codec.RecordBatch {
+	lowRecordBatch := &codec.RecordBatch{}
 	lowRecordBatch.Offset = recordBatch.Offset
 	lowRecordBatch.LastOffsetDelta = recordBatch.LastOffsetDelta
 	lowRecordBatch.FirstTimestamp = recordBatch.FirstTimestamp
 	lowRecordBatch.LastTimestamp = recordBatch.LastTimestamp
 	lowRecordBatch.BaseSequence = recordBatch.BaseSequence
-	lowRecordBatch.Records = make([]*service.Record, len(recordBatch.Records))
+	lowRecordBatch.Records = make([]*codec.Record, len(recordBatch.Records))
 	for i, r := range recordBatch.Records {
-		record := &service.Record{}
+		record := &codec.Record{}
 		record.RelativeTimestamp = r.RelativeTimestamp
 		record.RelativeOffset = r.RelativeOffset
 		record.Key = r.Key

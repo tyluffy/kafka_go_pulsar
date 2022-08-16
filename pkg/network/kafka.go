@@ -34,7 +34,7 @@ var connCount int32
 
 var connMutex sync.Mutex
 
-func NewServer(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl service.KfsarServer) (*Server, error) {
+func NewServer(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl service.KafsarServer) (*Server, error) {
 	server := &Server{
 		kafkaProtocolConfig: kfkProtocolConfig,
 		kafsarImpl:          impl,
@@ -287,6 +287,6 @@ type Server struct {
 	ConnMap             sync.Map
 	SaslMap             sync.Map
 	kafkaProtocolConfig *KafkaProtocolConfig
-	kafsarImpl          service.KfsarServer
+	kafsarImpl          service.KafsarServer
 	kafkaServer         *kgnet.KafkaServer
 }

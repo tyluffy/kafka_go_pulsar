@@ -30,26 +30,26 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 		return nil, gnet.Close
 	}
 	logrus.Debug("fetch req ", req)
-	lowReq := &service.FetchReq{}
+	lowReq := &codec.FetchReq{}
 	lowReq.MaxBytes = req.MaxBytes
 	lowReq.MinBytes = req.MinBytes
 	lowReq.MaxWaitTime = req.MaxWaitTime
-	lowReq.FetchTopicReqList = make([]*service.FetchTopicReq, len(req.TopicReqList))
+	lowReq.TopicReqList = make([]*codec.FetchTopicReq, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &service.FetchTopicReq{}
+		lowTopicReq := &codec.FetchTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.FetchPartitionReqList = make([]*service.FetchPartitionReq, len(topicReq.PartitionReqList))
+		lowTopicReq.PartitionReqList = make([]*codec.FetchPartitionReq, len(topicReq.PartitionReqList))
 		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &service.FetchPartitionReq{}
+			lowPartitionReq := &codec.FetchPartitionReq{}
 			lowPartitionReq.PartitionId = partitionReq.PartitionId
 			lowPartitionReq.FetchOffset = partitionReq.FetchOffset
-			lowPartitionReq.ClientId = req.ClientId
-			lowTopicReq.FetchPartitionReqList[j] = lowPartitionReq
+			lowTopicReq.PartitionReqList[j] = lowPartitionReq
 		}
-		lowReq.FetchTopicReqList[i] = lowTopicReq
+		lowReq.ClientId = req.ClientId
+		lowReq.TopicReqList[i] = lowTopicReq
 	}
 	lowTopicRespList, err := service.Fetch(ctx.Addr, s.kafsarImpl, lowReq)
 	if err != nil {
@@ -60,11 +60,11 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 	for i, lowTopicResp := range lowTopicRespList {
 		f := &codec.FetchTopicResp{}
 		f.Topic = lowTopicResp.Topic
-		f.PartitionRespList = make([]*codec.FetchPartitionResp, len(lowTopicResp.FetchPartitionRespList))
-		for j, p := range lowTopicResp.FetchPartitionRespList {
+		f.PartitionRespList = make([]*codec.FetchPartitionResp, len(lowTopicResp.PartitionRespList))
+		for j, p := range lowTopicResp.PartitionRespList {
 			partitionResp := &codec.FetchPartitionResp{}
-			partitionResp.PartitionIndex = p.PartitionId
-			partitionResp.ErrorCode = int16(p.ErrorCode)
+			partitionResp.PartitionIndex = p.PartitionIndex
+			partitionResp.ErrorCode = p.ErrorCode
 			partitionResp.HighWatermark = p.HighWatermark
 			partitionResp.LastStableOffset = p.LastStableOffset
 			partitionResp.LogStartOffset = p.LogStartOffset
@@ -80,7 +80,7 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 	return resp, gnet.None
 }
 
-func (s *Server) convertRecordBatchResp(lowRecordBatch *service.RecordBatch) *codec.RecordBatch {
+func (s *Server) convertRecordBatchResp(lowRecordBatch *codec.RecordBatch) *codec.RecordBatch {
 	recordBatch := &codec.RecordBatch{}
 	recordBatch.Offset = lowRecordBatch.Offset
 	recordBatch.LeaderEpoch = 0

@@ -30,23 +30,23 @@ func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, req *codec.OffsetFe
 		return nil, gnet.Close
 	}
 	logrus.Debug("offset fetch req ", req)
-	lowReq := &service.OffsetFetchReq{}
-	lowReq.TopicReqList = make([]*service.OffsetFetchTopicReq, len(req.TopicReqList))
+	lowReq := &codec.OffsetFetchReq{}
+	lowReq.TopicReqList = make([]*codec.OffsetFetchTopicReq, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &service.OffsetFetchTopicReq{}
+		lowTopicReq := &codec.OffsetFetchTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*service.OffsetFetchPartitionReq, len(topicReq.PartitionReqList))
+		lowTopicReq.PartitionReqList = make([]*codec.OffsetFetchPartitionReq, len(topicReq.PartitionReqList))
 		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &service.OffsetFetchPartitionReq{}
+			lowPartitionReq := &codec.OffsetFetchPartitionReq{}
 			lowPartitionReq.PartitionId = partitionReq.PartitionId
-			lowPartitionReq.ClientId = req.ClientId
-			lowPartitionReq.GroupId = req.GroupId
 			lowTopicReq.PartitionReqList[j] = lowPartitionReq
 		}
 		lowReq.TopicReqList[i] = lowTopicReq
+		lowReq.ClientId = req.ClientId
+		lowReq.GroupId = req.GroupId
 	}
 	lowResp, err := service.OffsetFetch(ctx.Addr, s.kafsarImpl, lowReq)
 	if err != nil {

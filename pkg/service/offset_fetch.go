@@ -18,53 +18,23 @@
 package service
 
 import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"net"
 )
 
-type OffsetFetchReq struct {
-	GroupId      string
-	TopicReqList []*OffsetFetchTopicReq
-}
-
-type OffsetFetchTopicReq struct {
-	Topic            string
-	PartitionReqList []*OffsetFetchPartitionReq
-}
-
-type OffsetFetchPartitionReq struct {
-	ClientId    string
-	PartitionId int
-	GroupId     string
-}
-
-type OffsetFetchResp struct {
-	ErrorCode     int16
-	TopicRespList []*OffsetFetchTopicResp
-}
-
-type OffsetFetchTopicResp struct {
-	Topic             string
-	PartitionRespList []*OffsetFetchPartitionResp
-}
-
-type OffsetFetchPartitionResp struct {
-	PartitionId int
-	Offset      int64
-	LeaderEpoch int32
-	Metadata    *string
-	ErrorCode   int16
-}
-
-func OffsetFetch(addr net.Addr, impl KfsarServer, req *OffsetFetchReq) (*OffsetFetchResp, error) {
+func OffsetFetch(addr net.Addr, impl KafsarServer, req *codec.OffsetFetchReq) (*codec.OffsetFetchResp, error) {
 	reqList := req.TopicReqList
-	result := &OffsetFetchResp{}
-	result.TopicRespList = make([]*OffsetFetchTopicResp, len(reqList))
+	result := &codec.OffsetFetchResp{}
+	result.TopicRespList = make([]*codec.OffsetFetchTopicResp, len(reqList))
 	for i, topicReq := range reqList {
-		f := &OffsetFetchTopicResp{}
+		f := &codec.OffsetFetchTopicResp{}
 		f.Topic = topicReq.Topic
-		f.PartitionRespList = make([]*OffsetFetchPartitionResp, 0)
+		f.PartitionRespList = make([]*codec.OffsetFetchPartitionResp, 0)
 		for _, partitionReq := range topicReq.PartitionReqList {
-			partition, _ := impl.OffsetFetch(addr, topicReq.Topic, partitionReq)
+			partition, err := impl.OffsetFetch(addr, topicReq.Topic, req.ClientId, req.GroupId, partitionReq)
+			if err != nil {
+				return nil, err
+			}
 			if partition != nil {
 				f.PartitionRespList = append(f.PartitionRespList, partition)
 			}

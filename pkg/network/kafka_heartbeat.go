@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -32,13 +31,13 @@ func (s *Server) ReactHeartbeat(heartbeatReqV4 *codec.HeartbeatReq, context *ctx
 			CorrelationId: heartbeatReqV4.CorrelationId,
 		},
 	}
-	req := service.HeartBeatReq{}
+	req := codec.HeartbeatReq{}
 	req.ClientId = heartbeatReqV4.ClientId
 	req.GenerationId = heartbeatReqV4.GenerationId
 	req.GroupInstanceId = heartbeatReqV4.GroupInstanceId
 	req.MemberId = heartbeatReqV4.MemberId
 	req.GroupId = heartbeatReqV4.GroupId
 	beat := s.kafsarImpl.HeartBeat(context.Addr, req)
-	heartBeatResp.ErrorCode = int16(beat.ErrorCode)
+	heartBeatResp.ErrorCode = beat.ErrorCode
 	return heartBeatResp, gnet.None
 }

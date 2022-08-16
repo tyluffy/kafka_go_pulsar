@@ -17,7 +17,9 @@
 
 package kafsar
 
-import "github.com/paashzj/kafka_go_pulsar/pkg/service"
+import (
+	"github.com/protocol-laboratory/kafka-codec-go/codec"
+)
 
 const (
 	clientId         = "test-client-id"
@@ -26,10 +28,10 @@ const (
 )
 
 var (
-	protocol = service.GroupProtocol{
+	protocol = codec.GroupProtocol{
 		ProtocolName:     "range",
 		ProtocolMetadata: "000100000001000474657374ffffffff00000000",
 	}
-	groupProtocol []*service.GroupProtocol
+	groupProtocol []*codec.GroupProtocol
 	protocols     = append(groupProtocol, &protocol)
 )

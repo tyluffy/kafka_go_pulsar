@@ -22,38 +22,6 @@ import (
 	"net"
 )
 
-type FetchReq struct {
-	MinBytes          int
-	MaxBytes          int
-	MaxWaitTime       int
-	FetchTopicReqList []*FetchTopicReq
-}
-
-type FetchTopicReq struct {
-	Topic                 string
-	FetchPartitionReqList []*FetchPartitionReq
-}
-
-type FetchTopicResp struct {
-	Topic                  string
-	FetchPartitionRespList []*FetchPartitionResp
-}
-
-type FetchPartitionReq struct {
-	PartitionId int
-	FetchOffset int64
-	ClientId    string
-}
-
-type FetchPartitionResp struct {
-	ErrorCode        codec.ErrorCode
-	PartitionId      int
-	HighWatermark    int64
-	LastStableOffset int64
-	LogStartOffset   int64
-	RecordBatch      *RecordBatch
-}
-
-func Fetch(addr net.Addr, impl KfsarServer, req *FetchReq) ([]*FetchTopicResp, error) {
+func Fetch(addr net.Addr, impl KafsarServer, req *codec.FetchReq) ([]*codec.FetchTopicResp, error) {
 	return impl.Fetch(addr, req)
 }

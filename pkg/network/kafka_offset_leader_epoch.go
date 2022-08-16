@@ -28,16 +28,16 @@ func (s *Server) OffsetForLeaderEpochVersion(ctx *ctx.NetworkContext, req *codec
 	if !s.checkSasl(ctx) {
 		return nil, gnet.Close
 	}
-	lowReqList := make([]*service.OffsetLeaderEpochTopicReq, len(req.TopicReqList))
+	lowReqList := make([]*codec.OffsetLeaderEpochTopicReq, len(req.TopicReqList))
 	for i, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &service.OffsetLeaderEpochTopicReq{}
+		lowTopicReq := &codec.OffsetLeaderEpochTopicReq{}
 		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = make([]*service.OffsetLeaderEpochPartitionReq, len(topicReq.PartitionReqList))
+		lowTopicReq.PartitionReqList = make([]*codec.OffsetLeaderEpochPartitionReq, len(topicReq.PartitionReqList))
 		for j, partitionReq := range topicReq.PartitionReqList {
-			lowPartitionReq := &service.OffsetLeaderEpochPartitionReq{}
+			lowPartitionReq := &codec.OffsetLeaderEpochPartitionReq{}
 			lowPartitionReq.PartitionId = partitionReq.PartitionId
 			lowPartitionReq.CurrentLeaderEpoch = partitionReq.CurrentLeaderEpoch
 			lowPartitionReq.LeaderEpoch = partitionReq.LeaderEpoch

@@ -18,7 +18,6 @@
 package kafsar
 
 import (
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/stretchr/testify/assert"
 	"sync"
@@ -126,10 +125,10 @@ func TestNotifyReJoinGroup(t *testing.T) {
 
 	// leader sync
 	members := group.members
-	groupAssignments := make([]*service.GroupAssignment, len(members))
+	groupAssignments := make([]*codec.GroupAssignment, len(members))
 	i := 0
 	for memberId := range members {
-		g := &service.GroupAssignment{}
+		g := &codec.GroupAssignment{}
 		g.MemberId = memberId
 		groupAssignments[i] = g
 		i++
@@ -191,7 +190,6 @@ func TestHandleJoinGroupMultiMember(t *testing.T) {
 		oneMemberRebalanceHandler(t, groupCoordinator, waitGroup)
 	}()
 	waitGroup.Wait()
-	time.Sleep(5 * time.Second)
 	group, err := groupCoordinator.GetGroup(testUsername, groupId)
 	if err != nil {
 		t.Fatal(err)
@@ -207,11 +205,11 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 	group, err := groupCoordinator.GetGroup(testUsername, groupId)
 	assert.Nil(t, err)
 	members := group.members
-	groupAssignments := make([]*service.GroupAssignment, len(members))
+	groupAssignments := make([]*codec.GroupAssignment, len(members))
 	if resp.MemberId == group.leader {
 		i := 0
 		for memberId := range members {
-			g := &service.GroupAssignment{}
+			g := &codec.GroupAssignment{}
 			g.MemberId = memberId
 			g.MemberAssignment = "testAssignment: " + memberId
 			groupAssignments[i] = g
@@ -232,11 +230,11 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 			resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, group.leader, clientId, protocolType, sessionTimeoutMs, protocols)
 			assert.Nil(t, err)
 			newMembers := group.members
-			newGroupAssignments := make([]*service.GroupAssignment, len(newMembers))
+			newGroupAssignments := make([]*codec.GroupAssignment, len(newMembers))
 			if resp.MemberId == group.leader {
 				i := 0
 				for newMemberId := range newMembers {
-					g := &service.GroupAssignment{}
+					g := &codec.GroupAssignment{}
 					g.MemberId = newMemberId
 					newGroupAssignments[i] = g
 					i++
@@ -261,7 +259,7 @@ func TestHandleJoinGroupInvalidParams(t *testing.T) {
 
 	// invalid protocol
 	groupCoordinatorEmptyProtocol := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
-	var protocolsEmpty []*service.GroupProtocol
+	var protocolsEmpty []*codec.GroupProtocol
 	resp, err = groupCoordinatorEmptyProtocol.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocolsEmpty)
 	if err != nil {
 		t.Fatal(err)
@@ -287,11 +285,11 @@ func TestHandleSyncGroup(t *testing.T) {
 	assert.Equal(t, 1, len(joinGroupResp.Members))
 
 	memberId = joinGroupResp.MemberId
-	assignment := service.GroupAssignment{
+	assignment := codec.GroupAssignment{
 		MemberId:         memberId,
 		MemberAssignment: "0001000000010004746573740000000100000000ffffffff",
 	}
-	var groupAssignment []*service.GroupAssignment
+	var groupAssignment []*codec.GroupAssignment
 	groupAssignments := append(groupAssignment, &assignment)
 	syncGroupResp, err := groupCoordinator.HandleSyncGroup(testUsername, groupId, memberId, generation, groupAssignments)
 	if err != nil {
@@ -310,11 +308,11 @@ func TestHandleSyncGroupInvalidParams(t *testing.T) {
 	assert.Equal(t, codec.NONE, joinGroupResp.ErrorCode)
 
 	memberId = joinGroupResp.MemberId
-	assignment := service.GroupAssignment{
+	assignment := codec.GroupAssignment{
 		MemberId:         memberId,
 		MemberAssignment: "0001000000010004746573740000000100000000ffffffff",
 	}
-	var groupAssignment []*service.GroupAssignment
+	var groupAssignment []*codec.GroupAssignment
 	groupAssignments := append(groupAssignment, &assignment)
 	// invalid groupId
 	groupIdEmpty := ""
@@ -343,8 +341,8 @@ func TestLeaveGroup(t *testing.T) {
 	group := groupCoordinator.groupManager[testUsername+groupId]
 	assert.Equal(t, group.leader, resp.MemberId)
 
-	var members []*service.LeaveGroupMember
-	leaveGroupMembers := append(members, &service.LeaveGroupMember{
+	var members []*codec.LeaveGroupMember
+	leaveGroupMembers := append(members, &codec.LeaveGroupMember{
 		MemberId: resp.MemberId,
 	})
 	leaveGroupResp, err := groupCoordinator.HandleLeaveGroup(testUsername, groupId, leaveGroupMembers)
@@ -382,8 +380,8 @@ func TestMultiConsumerLeaveGroup(t *testing.T) {
 	assert.Equal(t, group.leader, resp1.MemberId)
 
 	// leader member leave group
-	var members []*service.LeaveGroupMember
-	leaveGroupMembers := append(members, &service.LeaveGroupMember{
+	var members []*codec.LeaveGroupMember
+	leaveGroupMembers := append(members, &codec.LeaveGroupMember{
 		MemberId: resp1.MemberId,
 	})
 	leaveGroupResp, err := groupCoordinator.HandleLeaveGroup(testUsername, groupId, leaveGroupMembers)

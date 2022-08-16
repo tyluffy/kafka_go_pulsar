@@ -19,7 +19,6 @@ package network
 
 import (
 	"github.com/paashzj/kafka_go_pulsar/pkg/network/ctx"
-	"github.com/paashzj/kafka_go_pulsar/pkg/service"
 	"github.com/panjf2000/gnet"
 	"github.com/protocol-laboratory/kafka-codec-go/codec"
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,7 @@ func (s *Server) ReactSyncGroup(ctx *ctx.NetworkContext, req *codec.SyncGroupReq
 		return nil, gnet.Close
 	}
 	logrus.Debug("sync group req", req)
-	lowReq := &service.SyncGroupReq{}
+	lowReq := &codec.SyncGroupReq{}
 	lowReq.GroupId = req.GroupId
 	lowReq.ClientId = req.ClientId
 	lowReq.GenerationId = req.GenerationId
@@ -38,9 +37,9 @@ func (s *Server) ReactSyncGroup(ctx *ctx.NetworkContext, req *codec.SyncGroupReq
 	lowReq.GroupInstanceId = req.GroupInstanceId
 	lowReq.ProtocolType = req.ProtocolType
 	lowReq.ProtocolName = req.ProtocolName
-	lowReq.GroupAssignments = make([]*service.GroupAssignment, len(req.GroupAssignments))
+	lowReq.GroupAssignments = make([]*codec.GroupAssignment, len(req.GroupAssignments))
 	for i, groupAssignment := range req.GroupAssignments {
-		g := &service.GroupAssignment{}
+		g := &codec.GroupAssignment{}
 		g.MemberAssignment = groupAssignment.MemberAssignment
 		g.MemberId = groupAssignment.MemberId
 		lowReq.GroupAssignments[i] = g
