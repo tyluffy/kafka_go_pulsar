@@ -35,7 +35,7 @@ type PulsarConfig struct {
 
 type KafsarConfig struct {
 	// network config
-	GnetConfig kgnet.GnetConfig
+	GnetConfig kgnet.GnetServerConfig
 	NeedSasl   bool
 	MaxConn    int32
 

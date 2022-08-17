@@ -27,7 +27,7 @@ import (
 
 func main() {
 	flag.Parse()
-	gnetConfig := kgnet.GnetConfig{
+	gnetConfig := kgnet.GnetServerConfig{
 		ListenHost:   "0.0.0.0",
 		ListenPort:   9092,
 		EventLoopNum: 100,
@@ -56,7 +56,7 @@ func main() {
 	config.KafsarConfig.InitialDelayedJoinMs = 3000
 	config.KafsarConfig.RebalanceTickMs = 100
 	config.TraceConfig.DisableTracing = true
-	e := &ItKafsaImpl{}
+	e := &ItKafsarImpl{}
 	impl, err := kafsar.NewKafsar(e, config)
 	if err != nil {
 		panic(err)

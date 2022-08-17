@@ -20,7 +20,7 @@ package utils
 import (
 	"errors"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -58,7 +58,7 @@ func HttpGet(url string, params map[string]string, header map[string]string) (re
 		return nil, err
 	}
 	defer response.Body.Close()
-	msg, err := ioutil.ReadAll(response.Body)
+	msg, err := io.ReadAll(response.Body)
 	if err != nil {
 		logrus.Errorf("get response failed. err: %s", err)
 		return nil, err

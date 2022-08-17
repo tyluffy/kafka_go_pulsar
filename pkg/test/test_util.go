@@ -20,7 +20,7 @@ package test
 import (
 	"bytes"
 	"github.com/apache/pulsar-client-go/pulsar"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -75,5 +75,5 @@ func HttpGetRequest(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.ReadAll(response.Body)
+	return io.ReadAll(response.Body)
 }

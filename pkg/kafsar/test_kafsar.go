@@ -36,7 +36,7 @@ func SetupKafsar() (*Broker, int) {
 
 func setupKafsarInternal(port int) (*Broker, error) {
 	config := &Config{}
-	gnetConfig := kgnet.GnetConfig{
+	gnetConfig := kgnet.GnetServerConfig{
 		ListenHost: "localhost",
 		ListenPort: port,
 	}

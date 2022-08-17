@@ -75,7 +75,7 @@ var connCount int32
 
 var connMutex sync.Mutex
 
-func NewServer(config *kgnet.GnetConfig, kfkProtocolConfig *KafkaProtocolConfig, impl KafsarServer) (*Server, error) {
+func NewServer(config *kgnet.GnetServerConfig, kfkProtocolConfig *KafkaProtocolConfig, impl KafsarServer) (*Server, error) {
 	server := &Server{
 		kafkaProtocolConfig: kfkProtocolConfig,
 		kafsarImpl:          impl,
@@ -127,8 +127,8 @@ func (s *Server) InvalidKafkaPacket(c gnet.Conn) {
 	logrus.Error("invalid data packet", c.RemoteAddr())
 }
 
-func (s *Server) ConnError(c gnet.Conn, r any, stack []byte) {
-	logrus.Warn("conn error", c.RemoteAddr(), r, string(stack))
+func (s *Server) ConnError(c gnet.Conn, err error) {
+	logrus.Warn("conn error", c.RemoteAddr(), err)
 }
 
 func (s *Server) UnSupportedApi(c gnet.Conn, apiKey codec.ApiCode, apiVersion int16) {

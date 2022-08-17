@@ -445,6 +445,8 @@ github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220815060556-df0987a576f3 h1:Rq1DxJFon50wN5absuC2GJMcwmm0HxD0ZkIZEGsHpBw=
 github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220815060556-df0987a576f3/go.mod h1:ee9DQZroF7JJQGmlbbZcaKarE/1R6wloJyEMbReklYc=
+github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220816144605-4a89f8cf13ba h1:hVvsIzjzdOJYasVbQTqgKvNkyKPJLEB1XmpXBXGreVQ=
+github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220816144605-4a89f8cf13ba/go.mod h1:yuRg7ODYTcpmeCFaCqc3yWAUxuywTRUFMxFuVWuAkeE=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=

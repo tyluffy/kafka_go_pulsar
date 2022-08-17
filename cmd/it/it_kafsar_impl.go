@@ -21,30 +21,30 @@ import "github.com/apache/pulsar-client-go/pulsar"
 
 var pulsarClient, _ = pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
 
-type ItKafsaImpl struct {
+type ItKafsarImpl struct {
 }
 
-func (e ItKafsaImpl) Auth(username string, password string, clientId string) (bool, error) {
+func (e ItKafsarImpl) Auth(username string, password string, clientId string) (bool, error) {
 	return true, nil
 }
 
-func (e ItKafsaImpl) AuthTopic(username string, password, clientId, topic, permissionType string) (bool, error) {
+func (e ItKafsarImpl) AuthTopic(username string, password, clientId, topic, permissionType string) (bool, error) {
 	return true, nil
 }
 
-func (e ItKafsaImpl) AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error) {
+func (e ItKafsarImpl) AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error) {
 	return true, nil
 }
 
-func (e ItKafsaImpl) SubscriptionName(groupId string) (string, error) {
+func (e ItKafsarImpl) SubscriptionName(groupId string) (string, error) {
 	return groupId, nil
 }
 
-func (e ItKafsaImpl) PulsarTopic(username, topic string) (string, error) {
+func (e ItKafsarImpl) PulsarTopic(username, topic string) (string, error) {
 	return "persistent://public/default/" + topic, nil
 }
 
-func (e ItKafsaImpl) PartitionNum(username, topic string) (int, error) {
+func (e ItKafsarImpl) PartitionNum(username, topic string) (int, error) {
 	pulsarTopic, err := e.PulsarTopic(username, topic)
 	if err != nil {
 		return 0, err
@@ -56,6 +56,6 @@ func (e ItKafsaImpl) PartitionNum(username, topic string) (int, error) {
 	return len(partitions), nil
 }
 
-func (e ItKafsaImpl) HasFlowQuota(username, topic string) bool {
+func (e ItKafsarImpl) HasFlowQuota(username, topic string) bool {
 	return true
 }
