@@ -133,7 +133,7 @@ func TestFetchPartitionNoMessage(t *testing.T) {
 		PartitionId: partition,
 		FetchOffset: offset.Offset,
 	}
-	k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 200, TracerSpan{})
+	k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 200, LocalSpan{})
 
 	url := "http://localhost:8080/admin/v2/persistent/public/default/" + pulsarTopic + fmt.Sprintf(constant.PartitionSuffixFormat, partition) + "/subscriptions"
 	request, err := test.HttpGetRequest(url)
@@ -204,7 +204,7 @@ func TestFetchAndCommitOffset(t *testing.T) {
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -287,7 +287,7 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -343,13 +343,13 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	}
 	assert.Equal(t, codec.NONE, offsetFetchPartitionResp.ErrorCode)
 
-	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset = int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
 	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 
-	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 0, len(fetchPartitionResp.RecordBatch.Records))
 
@@ -447,7 +447,7 @@ func TestEarliestMsg(t *testing.T) {
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -547,7 +547,7 @@ func TestLatestMsg(t *testing.T) {
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -756,7 +756,7 @@ func TestMinBytesMsg(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
 	testMinBytes := 1
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 2000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 1, len(fetchPartitionResp.RecordBatch.Records))
 }
@@ -841,7 +841,7 @@ func TestMaxBytesMsg(t *testing.T) {
 	}
 	testMinBytes := 1
 	maxBytes := 15
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 5000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 5000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 2, len(fetchPartitionResp.RecordBatch.Records))
 }
@@ -1019,7 +1019,7 @@ func TestFetchAfterDisConnect(t *testing.T) {
 		PartitionId: partition,
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	offset := int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
@@ -1065,7 +1065,7 @@ func TestFetchAfterDisConnect(t *testing.T) {
 	}
 	assert.Equal(t, codec.NONE, offsetFetchPartitionResp.ErrorCode)
 
-	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, TracerSpan{})
+	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
 	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
@@ -1151,7 +1151,7 @@ func TestMsgWithFlowQuota(t *testing.T) {
 	}
 	testMinBytes := 1
 	maxBytes := 15
-	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 5000, TracerSpan{})
+	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 5000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 0, len(fetchPartitionResp.RecordBatch.Records))
 }

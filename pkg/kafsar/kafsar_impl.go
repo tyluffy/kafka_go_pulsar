@@ -48,7 +48,7 @@ type Broker struct {
 	offsetManager      OffsetManager
 	memberManager      map[string]*MemberInfo
 	topicGroupManager  map[string]string
-	tracer             *NoErrorTracer // skywalking tracer
+	tracer             NoErrorTracer // common tracer
 }
 
 type userInfo struct {
@@ -113,7 +113,11 @@ func NewKafsar(impl Server, config *Config) (*Broker, error) {
 	if err != nil {
 		return nil, err
 	}
-	broker.tracer = NewTracer(config.TraceConfig)
+	if config.TraceConfig == nil {
+		config.TraceConfig = &SkywalkingTracerConfig{}
+	}
+	broker.tracer = config.TraceConfig
+	broker.tracer.NewProvider()
 	return &broker, nil
 }
 
@@ -127,8 +131,7 @@ func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *c
 }
 
 func (b *Broker) Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicResp, error) {
-	traceSpan := b.tracer.CreateLocalLogSpan(context.Background())
-	b.tracer.SpanLog(traceSpan, "fetch action starting")
+	traceSpan := b.tracer.NewSpan(context.Background(), "Fetch", "broker fetch action starting")
 
 	var maxWaitTime int
 	if req.MaxWaitTime < b.kafsarConfig.MaxFetchWaitMs {
@@ -139,8 +142,7 @@ func (b *Broker) Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicR
 	reqList := req.TopicReqList
 	result := make([]*codec.FetchTopicResp, len(reqList))
 	for i, topicReq := range reqList {
-		topicSpan := b.traceFetchLog(traceSpan, fmt.Sprintf(
-			"topic: %s fetching", topicReq.Topic), true, false)
+		topicSpan := b.tracer.NewSubSpan(traceSpan, "FetchPartition")
 		f := &codec.FetchTopicResp{}
 		f.Topic = topicReq.Topic
 		f.PartitionRespList = make([]*codec.FetchPartitionResp, len(topicReq.PartitionReqList))
@@ -149,19 +151,17 @@ func (b *Broker) Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicR
 				req.MaxBytes, req.MinBytes, maxWaitTime/len(topicReq.PartitionReqList), topicSpan)
 		}
 		result[i] = f
-		b.traceFetchLog(topicSpan, fmt.Sprintf("topic: %s fetched", topicReq.Topic), false, true)
+		b.tracer.EndSpan(topicSpan, fmt.Sprintf("topic: %s fetched", topicReq.Topic))
 	}
-	b.tracer.SpanLogWithClose(traceSpan, "fetch action done")
+	b.tracer.EndSpan(traceSpan, "fetch action done")
 	return result, nil
 }
 
 // FetchPartition visible for testing
-func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req *codec.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, span TracerSpan) *codec.FetchPartitionResp {
+func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req *codec.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, span LocalSpan) *codec.FetchPartitionResp {
 	// open tracer, log
-	fetchSpan := b.traceFetchLog(span, fmt.Sprintf("fetching partition %s:%d",
-		kafkaTopic, req.PartitionId), true, false)
-	defer b.traceFetchLog(fetchSpan, fmt.Sprintf("fetched partition %s:%d",
-		kafkaTopic, req.PartitionId), false, true)
+	fetchSpan := b.tracer.NewSubSpan(span, fmt.Sprintf("fetching partition %s:%d", kafkaTopic, req.PartitionId))
+	defer b.tracer.EndSpan(fetchSpan, fmt.Sprintf("fetched partition %s:%d", kafkaTopic, req.PartitionId))
 	start := time.Now()
 	b.mutex.RLock()
 	user, exist := b.userInfoManager[addr.String()]
@@ -813,40 +813,4 @@ func (b *Broker) checkPartitionTopicExist(topics []string, partitionTopic string
 		}
 	}
 	return false
-}
-
-func (b *Broker) checkTracer() bool {
-	if b.tracer == nil {
-		return false
-	}
-	if !b.tracer.enableTrace {
-		return false
-	}
-	return true
-}
-
-// traceFetchLog trace fetch action, if isNewSpan == true, will create a new child span to log
-// if isClose == true, will close when span is written
-func (b *Broker) traceFetchLog(span TracerSpan, log string, isNewSpan, isClose bool) TracerSpan {
-	if !b.checkTracer() {
-		return span
-	}
-	if span.span == nil {
-		return span
-	}
-
-	var childSpan TracerSpan
-	if isNewSpan {
-		childSpan = b.tracer.CreateLocalLogSpan(span.ctx)
-	} else {
-		childSpan = span
-	}
-
-	if isClose {
-		b.tracer.SpanLogWithClose(childSpan, log)
-		return childSpan
-	}
-
-	b.tracer.SpanLog(childSpan, log)
-	return childSpan
 }

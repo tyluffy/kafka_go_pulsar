@@ -24,7 +24,7 @@ import (
 type Config struct {
 	PulsarConfig PulsarConfig
 	KafsarConfig KafsarConfig
-	TraceConfig  TraceConfig
+	TraceConfig  NoErrorTracer
 }
 
 type PulsarConfig struct {
@@ -64,11 +64,4 @@ type KafsarConfig struct {
 	InitialDelayedJoinMs int
 	// RebalanceTickMs
 	RebalanceTickMs int
-}
-
-type TraceConfig struct {
-	DisableTracing bool
-	SkywalkingHost string
-	SkywalkingPort int
-	SampleRate     float64
 }
