@@ -70,11 +70,6 @@ type KafsarServer interface {
 	Disconnect(addr net.Addr)
 }
 
-// connCount kafka connection count
-var connCount int32
-
-var connMutex sync.Mutex
-
 func NewServer(config *kgnet.GnetServerConfig, kfkProtocolConfig *KafkaProtocolConfig, impl KafsarServer) (*Server, error) {
 	server := &Server{
 		kafkaProtocolConfig: kfkProtocolConfig,
@@ -104,11 +99,11 @@ func (s *Server) OnInitComplete(server gnet.Server) (action gnet.Action) {
 }
 
 func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
-	if atomic.LoadInt32(&connCount) > s.kafkaProtocolConfig.MaxConn {
+	if atomic.LoadInt32(&s.connCount) > s.kafkaProtocolConfig.MaxConn {
 		logrus.Error("connection reach max, refused to connect ", c.RemoteAddr())
 		return nil, gnet.Close
 	}
-	connCount := atomic.AddInt32(&connCount, 1)
+	connCount := atomic.AddInt32(&s.connCount, 1)
 	s.ConnMap.Store(c.RemoteAddr(), c)
 	logrus.Info("new connection connected ", connCount, " from ", c.RemoteAddr())
 	return
@@ -119,7 +114,7 @@ func (s *Server) OnClosed(c gnet.Conn, err error) (action gnet.Action) {
 	s.kafsarImpl.Disconnect(c.RemoteAddr())
 	s.ConnMap.Delete(c.RemoteAddr())
 	s.SaslMap.Delete(c.RemoteAddr())
-	atomic.AddInt32(&connCount, -1)
+	atomic.AddInt32(&s.connCount, -1)
 	return
 }
 
@@ -314,17 +309,19 @@ func (s *Server) SyncGroup(c gnet.Conn, req *codec.SyncGroupReq) (*codec.SyncGro
 }
 
 func (s *Server) getCtx(c gnet.Conn) *ctx.NetworkContext {
-	connMutex.Lock()
+	s.connMutex.Lock()
 	connCtx := c.Context()
 	if connCtx == nil {
 		addr := c.RemoteAddr()
 		c.SetContext(&ctx.NetworkContext{Addr: addr})
 	}
-	connMutex.Unlock()
+	s.connMutex.Unlock()
 	return c.Context().(*ctx.NetworkContext)
 }
 
 type Server struct {
+	connCount           int32
+	connMutex           sync.Mutex
 	ConnMap             sync.Map
 	SaslMap             sync.Map
 	kafkaProtocolConfig *KafkaProtocolConfig

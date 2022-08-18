@@ -48,6 +48,7 @@ type Broker struct {
 	offsetManager      OffsetManager
 	memberManager      map[string]*MemberInfo
 	topicGroupManager  map[string]string
+	producerManager    map[string]pulsar.Producer
 	tracer             NoErrorTracer // common tracer
 }
 
@@ -102,6 +103,7 @@ func NewKafsar(impl Server, config *Config) (*Broker, error) {
 	broker.memberManager = make(map[string]*MemberInfo)
 	broker.pulsarClientManage = make(map[string]pulsar.Client)
 	broker.topicGroupManager = make(map[string]string)
+	broker.producerManager = make(map[string]pulsar.Producer)
 	kfkProtocolConfig := &network.KafkaProtocolConfig{}
 	kfkProtocolConfig.ClusterId = config.KafsarConfig.ClusterId
 	kfkProtocolConfig.AdvertiseHost = config.KafsarConfig.AdvertiseHost
