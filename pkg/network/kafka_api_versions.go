@@ -31,7 +31,7 @@ func (s *Server) ReactApiVersion(apiRequest *codec.ApiReq) (*codec.ApiResp, gnet
 		},
 	}
 	resp.ErrorCode = 0
-	apiRespVersions := make([]*codec.ApiRespVersion, 20)
+	apiRespVersions := make([]*codec.ApiRespVersion, 18)
 	apiRespVersions[0] = &codec.ApiRespVersion{ApiKey: codec.Produce, MinVersion: 0, MaxVersion: 9}
 	apiRespVersions[1] = &codec.ApiRespVersion{ApiKey: codec.Fetch, MinVersion: 0, MaxVersion: 12}
 	apiRespVersions[2] = &codec.ApiRespVersion{ApiKey: codec.ListOffsets, MinVersion: 0, MaxVersion: 6}
@@ -47,11 +47,9 @@ func (s *Server) ReactApiVersion(apiRequest *codec.ApiReq) (*codec.ApiResp, gnet
 	apiRespVersions[12] = &codec.ApiRespVersion{ApiKey: codec.ListGroups, MinVersion: 0, MaxVersion: 4}
 	apiRespVersions[13] = &codec.ApiRespVersion{ApiKey: codec.SaslHandshake, MinVersion: 0, MaxVersion: 1}
 	apiRespVersions[14] = &codec.ApiRespVersion{ApiKey: codec.ApiVersions, MinVersion: 0, MaxVersion: 3}
-	apiRespVersions[15] = &codec.ApiRespVersion{ApiKey: codec.CreateTopics, MinVersion: 0, MaxVersion: 7}
-	apiRespVersions[16] = &codec.ApiRespVersion{ApiKey: codec.DeleteTopics, MinVersion: 0, MaxVersion: 6}
-	apiRespVersions[17] = &codec.ApiRespVersion{ApiKey: codec.DeleteRecords, MinVersion: 0, MaxVersion: 2}
-	apiRespVersions[18] = &codec.ApiRespVersion{ApiKey: codec.OffsetForLeaderEpoch, MinVersion: 0, MaxVersion: 4}
-	apiRespVersions[19] = &codec.ApiRespVersion{ApiKey: codec.SaslAuthenticate, MinVersion: 0, MaxVersion: 2}
+	apiRespVersions[15] = &codec.ApiRespVersion{ApiKey: codec.DeleteRecords, MinVersion: 0, MaxVersion: 2}
+	apiRespVersions[16] = &codec.ApiRespVersion{ApiKey: codec.OffsetForLeaderEpoch, MinVersion: 0, MaxVersion: 4}
+	apiRespVersions[17] = &codec.ApiRespVersion{ApiKey: codec.SaslAuthenticate, MinVersion: 0, MaxVersion: 2}
 	resp.ApiRespVersions = apiRespVersions
 	resp.ThrottleTime = 0
 	return &resp, gnet.None
