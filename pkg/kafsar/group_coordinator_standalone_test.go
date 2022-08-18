@@ -226,8 +226,7 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 		// one member heartbeat
 		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
 		if heartBeatResp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
-			// one member reJoin
-			// reJoin must be leader
+			// one member reJoin, it must be leader
 			resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, group.leader, clientId, protocolType, sessionTimeoutMs, protocols)
 			assert.Nil(t, err)
 			newMembers := group.members

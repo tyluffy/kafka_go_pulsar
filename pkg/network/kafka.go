@@ -137,7 +137,7 @@ func (s *Server) UnSupportedApi(c gnet.Conn, apiKey codec.ApiCode, apiVersion in
 
 func (s *Server) ApiVersion(c gnet.Conn, req *codec.ApiReq) (*codec.ApiResp, gnet.Action) {
 	version := req.ApiVersion
-	if version == 0 || version == 3 {
+	if version <= 3 {
 		return s.ReactApiVersion(req)
 	}
 	logrus.Warn("Unsupported apiVersion version", version)
@@ -223,7 +223,7 @@ func (s *Server) Metadata(c gnet.Conn, req *codec.MetadataReq) (*codec.MetadataR
 		return nil, gnet.Close
 	}
 	version := req.ApiVersion
-	if version == 1 || version == 9 {
+	if version == 1 || version == 8 || version == 9 {
 		return s.ReactMetadata(networkContext, req, s.kafkaProtocolConfig)
 	}
 	logrus.Warn("Unsupported metadata version", version)
