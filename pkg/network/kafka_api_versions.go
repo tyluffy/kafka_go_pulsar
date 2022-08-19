@@ -39,7 +39,7 @@ func (s *Server) ReactApiVersion(apiRequest *codec.ApiReq) (*codec.ApiResp, gnet
 	apiRespVersions[4] = &codec.ApiRespVersion{ApiKey: codec.OffsetCommit, MinVersion: 0, MaxVersion: 8}
 	apiRespVersions[5] = &codec.ApiRespVersion{ApiKey: codec.OffsetFetch, MinVersion: 0, MaxVersion: 7}
 	apiRespVersions[6] = &codec.ApiRespVersion{ApiKey: codec.FindCoordinator, MinVersion: 0, MaxVersion: 3}
-	apiRespVersions[7] = &codec.ApiRespVersion{ApiKey: codec.JoinGroup, MinVersion: 0, MaxVersion: 7}
+	apiRespVersions[7] = &codec.ApiRespVersion{ApiKey: codec.JoinGroup, MinVersion: 0, MaxVersion: 6}
 	apiRespVersions[8] = &codec.ApiRespVersion{ApiKey: codec.Heartbeat, MinVersion: 0, MaxVersion: 4}
 	apiRespVersions[9] = &codec.ApiRespVersion{ApiKey: codec.LeaveGroup, MinVersion: 0, MaxVersion: 4}
 	apiRespVersions[10] = &codec.ApiRespVersion{ApiKey: codec.SyncGroup, MinVersion: 0, MaxVersion: 5}
