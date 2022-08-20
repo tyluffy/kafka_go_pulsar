@@ -365,6 +365,8 @@ func (b *Broker) GroupSync(addr net.Addr, req *codec.SyncGroupReq) (*codec.SyncG
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
+	syncGroupResp.ProtocolName = req.ProtocolName
+	syncGroupResp.ProtocolType = req.ProtocolType
 	return syncGroupResp, nil
 }
 

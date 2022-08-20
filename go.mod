@@ -13,7 +13,7 @@ require (
 	github.com/paashzj/pulsar_proto_go v0.0.0-20220701021847-fa4815b6469f
 	github.com/panjf2000/gnet v1.6.6
 	github.com/pkg/errors v0.9.1
-	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220818042159-a4a41417c3f8
+	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220820035518-5d632aa7e2ff
 	github.com/segmentio/kafka-go v0.4.34
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
