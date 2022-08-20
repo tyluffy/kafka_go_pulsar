@@ -27,8 +27,11 @@ import (
 func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, config *KafkaProtocolConfig) (*codec.MetadataResp, gnet.Action) {
 	logrus.Debug("metadata req ", req)
 	topics := req.Topics
+	if len(topics) == 0 {
+		logrus.Warn("request metadata topic length is 0", ctx.Addr)
+	}
 	if len(topics) > 1 {
-		logrus.Error("currently, not support more than one topic")
+		logrus.Error("currently, not support more than one topic", ctx.Addr)
 		return nil, gnet.Close
 	}
 	topic := topics[0].Topic

@@ -44,6 +44,9 @@ type KafsarConfig struct {
 	AdvertiseHost string
 	AdvertisePort int
 
+	MaxProducerRecordSize int
+	MaxBatchSize          int
+
 	MaxConsumersPerGroup     int
 	GroupMinSessionTimeoutMs int
 	GroupMaxSessionTimeoutMs int

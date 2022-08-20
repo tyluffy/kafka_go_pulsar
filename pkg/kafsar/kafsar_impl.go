@@ -129,6 +129,17 @@ func (b *Broker) Run() error {
 }
 
 func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *codec.ProducePartitionReq) (*codec.ProducePartitionResp, error) {
+	span := b.tracer.NewSpan(context.Background(), "Produce", "broker produce msg starting")
+	defer b.tracer.EndSpan(span, fmt.Sprintf("produce msg %s:%d", kafkaTopic, partition))
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
+	if !exist {
+		logrus.Errorf("user not exist. username: %s, kafkaTopic: %s", user.username, kafkaTopic)
+		return &codec.ProducePartitionResp{
+			ErrorCode: codec.TOPIC_AUTHORIZATION_FAILED,
+		}, nil
+	}
 	panic("implement me")
 }
 
