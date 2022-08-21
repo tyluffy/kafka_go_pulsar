@@ -403,8 +403,6 @@ github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3I
 github.com/opencontainers/image-spec v1.0.2 h1:9yCKha/T5XdGtO0q9Q9a6T5NUCsTn/DrBg0D7ufOcFM=
 github.com/opencontainers/image-spec v1.0.2/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
-github.com/paashzj/pulsar_proto_go v0.0.0-20220701021847-fa4815b6469f h1:LFu8tDyUlmjO8t+tA8gRYduxZHgforQwFFT0AQrMIR4=
-github.com/paashzj/pulsar_proto_go v0.0.0-20220701021847-fa4815b6469f/go.mod h1:S2+FCiSFh96NvSJGTvoaMzqgt+gKbvVLVXCYINCyuDw=
 github.com/panjf2000/ants/v2 v2.4.7 h1:MZnw2JRyTJxFwtaMtUJcwE618wKD04POWk2gwwP4E2M=
 github.com/panjf2000/ants/v2 v2.4.7/go.mod h1:f6F0NZVFsGCp5A7QW/Zj/m92atWwOkY0OIhFxRNFr4A=
 github.com/panjf2000/gnet v1.6.6 h1:P6bApc54hnVcJVgH+SMe41mn47ECCajB6E/dKq27Y0c=
@@ -450,6 +448,8 @@ github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220820081109-72fae0c4a963 h1:x4/6VkWRfATMUlvjujtE/g+LwmzTtpb4UZaOIi117hI=
 github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220820081109-72fae0c4a963/go.mod h1:ee9DQZroF7JJQGmlbbZcaKarE/1R6wloJyEMbReklYc=
+github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220821101129-d614d1874e5d h1:I0xYQPwKYM7JUQxs+38OHjFzgNYQi7hGki9Y0CYUOdw=
+github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220821101129-d614d1874e5d/go.mod h1:Lp6acxfY0uMhrRsHp1vqZVDKpm3OuZLIIH6/V40AWCQ=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=

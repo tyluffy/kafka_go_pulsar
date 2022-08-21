@@ -26,7 +26,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/paashzj/kafka_go_pulsar/pkg/constant"
 	"github.com/paashzj/kafka_go_pulsar/pkg/model"
-	pb "github.com/paashzj/pulsar_proto_go"
+	"github.com/protocol-laboratory/pulsar-codec-go/pb"
 	"github.com/sirupsen/logrus"
 	"strings"
 	"time"
