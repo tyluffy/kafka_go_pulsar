@@ -34,6 +34,8 @@ func (s *Server) ReactSaslHandshakeAuth(req *codec.SaslAuthenticateReq, context 
 	saslReq := codec.SaslAuthenticateReq{Username: req.Username, Password: req.Password, BaseReq: codec.BaseReq{ClientId: req.ClientId}}
 	authResult, errorCode := s.kafsarImpl.SaslAuth(context.Addr, saslReq)
 	if errorCode != 0 {
+		logrus.Errorf("Sasl auth request failed, source name: %s:%s@%s, error code: %v",
+			req.Username, req.Password, context.Addr, errorCode)
 		return nil, gnet.Close
 	}
 	if authResult {
@@ -41,6 +43,7 @@ func (s *Server) ReactSaslHandshakeAuth(req *codec.SaslAuthenticateReq, context 
 		s.SaslMap.Store(context.Addr, saslReq)
 		return saslHandshakeResp, gnet.None
 	} else {
+		logrus.Errorf("Sasl auth failed, source name: %s:%s@%s", req.Username, req.Password, context.Addr)
 		return nil, gnet.Close
 	}
 }

@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/panjf2000/gnet v1.6.6
 	github.com/pkg/errors v0.9.1
-	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220820081109-72fae0c4a963
+	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220822134158-0ce7d50577ad
 	github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220821101129-d614d1874e5d
 	github.com/segmentio/kafka-go v0.4.34
 	github.com/sirupsen/logrus v1.9.0
