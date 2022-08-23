@@ -205,7 +205,7 @@ func (s *Server) ListOffsets(c gnet.Conn, req *codec.ListOffsetsReq) (*codec.Lis
 		return nil, gnet.Close
 	}
 	version := req.ApiVersion
-	if version == 1 || version == 5 {
+	if version == 1 || version == 5 || version == 6 {
 		return s.ListOffsetsVersion(networkContext, req)
 	}
 	logrus.Warn("Unsupported listOffsets version", version)
