@@ -131,6 +131,7 @@ func (b *Broker) Run() error {
 
 func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *codec.ProducePartitionReq) (*codec.ProducePartitionResp, error) {
 	span := b.tracer.NewSpan(context.Background(), "Produce", "broker produce msg starting")
+	b.tracer.SetAttribute(span, "action", "Produce")
 	defer b.tracer.EndSpan(span, fmt.Sprintf("produce msg %s:%d", kafkaTopic, partition))
 	b.mutex.RLock()
 	user, exist := b.userInfoManager[addr.String()]
@@ -182,7 +183,7 @@ func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *c
 
 func (b *Broker) Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicResp, error) {
 	traceSpan := b.tracer.NewSpan(context.Background(), "Fetch", "broker fetch action starting")
-
+	b.tracer.SetAttribute(traceSpan, "action", "Fetch")
 	var maxWaitTime int
 	if req.MaxWaitTime < b.kafsarConfig.MaxFetchWaitMs {
 		maxWaitTime = req.MaxWaitTime
@@ -209,7 +210,6 @@ func (b *Broker) Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicR
 
 // FetchPartition visible for testing
 func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req *codec.FetchPartitionReq, maxBytes int, minBytes int, maxWaitMs int, span LocalSpan) *codec.FetchPartitionResp {
-	// open tracer, log
 	fetchSpan := b.tracer.NewSubSpan(span, fmt.Sprintf("fetching partition %s:%d", kafkaTopic, req.PartitionId))
 	defer b.tracer.EndSpan(fetchSpan, fmt.Sprintf("fetched partition %s:%d", kafkaTopic, req.PartitionId))
 	start := time.Now()
