@@ -95,9 +95,9 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			ErrorCode: codec.UNKNOWN_MEMBER_ID,
 		}, nil
 	}
-
+	isNewMember := memberId == EmptyMemberId
 	if g.getGroupStatus(group) == PreparingRebalance {
-		if memberId == EmptyMemberId || !g.checkMemberExist(group, memberId) {
+		if isNewMember || !g.checkMemberExist(group, memberId) {
 			memberId, err = g.addNewMemberAndReBalance(group, clientId, memberId, protocolType, protocols)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
@@ -110,6 +110,9 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 		err := g.awaitingJoin(group, memberId, g.kafsarConfig.RebalanceTickMs, sessionTimeoutMs)
 		if err != nil {
 			logrus.Errorf("member %s join group %s failed, case: %s", memberId, groupId, err)
+			if isNewMember {
+				g.deleteMember(group, memberId)
+			}
 			return &codec.JoinGroupResp{
 				MemberId:  memberId,
 				ErrorCode: codec.REBALANCE_IN_PROGRESS,
@@ -128,7 +131,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 	}
 
 	if g.getGroupStatus(group) == CompletingRebalance {
-		if memberId == EmptyMemberId || !g.checkMemberExist(group, memberId) {
+		if isNewMember || !g.checkMemberExist(group, memberId) {
 			memberId, err = g.addNewMemberAndReBalance(group, clientId, memberId, protocolType, protocols)
 			if err != nil {
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
@@ -154,6 +157,9 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 		err := g.awaitingJoin(group, memberId, g.kafsarConfig.RebalanceTickMs, sessionTimeoutMs)
 		if err != nil {
 			logrus.Errorf("member %s join group %s failed, case: %s", memberId, groupId, err)
+			if isNewMember {
+				g.deleteMember(group, memberId)
+			}
 			return &codec.JoinGroupResp{
 				MemberId:  memberId,
 				ErrorCode: codec.REBALANCE_IN_PROGRESS,
@@ -171,7 +177,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 	}
 
 	if g.getGroupStatus(group) == Empty || g.getGroupStatus(group) == Stable {
-		if memberId == EmptyMemberId || !g.checkMemberExist(group, memberId) {
+		if isNewMember || !g.checkMemberExist(group, memberId) {
 			// avoid multi new member join an empty group
 			memberId, err = g.addNewMemberAndReBalance(group, clientId, memberId, protocolType, protocols)
 			if err != nil {
@@ -196,6 +202,9 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 		err := g.awaitingJoin(group, memberId, g.kafsarConfig.RebalanceTickMs, sessionTimeoutMs)
 		if err != nil {
 			logrus.Errorf("member %s join group %s failed, case: %s", memberId, groupId, err)
+			if isNewMember {
+				g.deleteMember(group, memberId)
+			}
 			return &codec.JoinGroupResp{
 				MemberId:  memberId,
 				ErrorCode: codec.REBALANCE_IN_PROGRESS,
@@ -322,21 +331,22 @@ func (g *GroupCoordinatorStandalone) HandleLeaveGroup(username, groupId string,
 			ErrorCode: codec.INVALID_GROUP_ID,
 		}, nil
 	}
-	membersMetadata := group.members
 	for i := range members {
 		if members[i].MemberId == g.getMemberLeader(group) {
 			g.setMemberLeader(group, "")
 		}
-		group.groupMemberLock.Lock()
-		delete(membersMetadata, members[i].MemberId)
-		group.groupMemberLock.Unlock()
+		g.deleteMember(group, members[i].MemberId)
 		logrus.Infof("reader member: %s success leave group: %s", members[i].MemberId, groupId)
 	}
+	group.groupLock.Lock()
+	group.generationId++
+	group.groupLock.Unlock()
 	if len(group.members) == 0 {
 		g.setGroupStatus(group, Empty)
+	} else {
+		// any member leave group should do rebalance
+		g.setGroupStatus(group, PreparingRebalance)
 	}
-	// any member leave group should do rebalance
-	g.setGroupStatus(group, PreparingRebalance)
 	return &codec.LeaveGroupResp{ErrorCode: codec.NONE, Members: members}, nil
 }
 
@@ -547,6 +557,12 @@ func (g *GroupCoordinatorStandalone) setMemberLeader(group *Group, leader string
 	group.groupMemberLock.Unlock()
 }
 
+func (g *GroupCoordinatorStandalone) deleteMember(group *Group, memberId string) {
+	group.groupMemberLock.Lock()
+	delete(group.members, memberId)
+	group.groupMemberLock.Unlock()
+}
+
 func (g *GroupCoordinatorStandalone) getLeaderMembers(group *Group, memberId string) (members []*codec.Member) {
 	if g.getMemberLeader(group) == "" {
 		g.setMemberLeader(group, memberId)
@@ -574,6 +590,7 @@ func (g *GroupCoordinatorStandalone) awaitingJoin(group *Group, memberId string,
 		}
 		group.groupMemberLock.Unlock()
 		if g.checkJoinMemberGenerationId(group, memberId) {
+			g.setGroupStatus(group, CompletingRebalance)
 			return nil
 		}
 		if time.Since(start).Milliseconds() >= int64(sessionTimeout) {
