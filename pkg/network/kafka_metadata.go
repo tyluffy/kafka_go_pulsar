@@ -36,25 +36,23 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 		return nil, gnet.Close
 	}
 	topic := topics[0].Topic
-	var metadataResp = &codec.MetadataResp{}
+	var metadataResp = &codec.MetadataResp{
+		BaseResp:                   codec.BaseResp{CorrelationId: req.CorrelationId},
+		ClusterId:                  config.ClusterId,
+		ControllerId:               config.NodeId,
+		ClusterAuthorizedOperation: -2147483648,
+		BrokerMetadataList: []*codec.BrokerMetadata{
+			{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil},
+		},
+	}
+
 	partitionNum, err := s.kafsarImpl.PartitionNum(ctx.Addr, topic)
 	if err != nil {
-		metadataResp.CorrelationId = req.CorrelationId
-		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil}
-		metadataResp.ClusterId = config.ClusterId
-		metadataResp.ControllerId = config.NodeId
 		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
 		topicMetadata := codec.TopicMetadata{ErrorCode: codec.UNKNOWN_SERVER_ERROR, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
 		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
 		metadataResp.TopicMetadataList[0] = &topicMetadata
-		metadataResp.ClusterAuthorizedOperation = -2147483648
 	} else {
-		metadataResp.CorrelationId = req.CorrelationId
-		metadataResp.BrokerMetadataList = make([]*codec.BrokerMetadata, 1)
-		metadataResp.BrokerMetadataList[0] = &codec.BrokerMetadata{NodeId: config.NodeId, Host: config.AdvertiseHost, Port: config.AdvertisePort, Rack: nil}
-		metadataResp.ClusterId = config.ClusterId
-		metadataResp.ControllerId = config.NodeId
 		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
 		topicMetadata := codec.TopicMetadata{ErrorCode: 0, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
 		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, partitionNum)
@@ -67,7 +65,6 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 			topicMetadata.PartitionMetadataList[i] = partitionMetadata
 		}
 		metadataResp.TopicMetadataList[0] = &topicMetadata
-		metadataResp.ClusterAuthorizedOperation = -2147483648
 	}
 	return metadataResp, gnet.None
 }

@@ -29,46 +29,24 @@ func (s *Server) ReactFetch(ctx *ctx.NetworkContext, req *codec.FetchReq) (*code
 		return nil, gnet.Close
 	}
 	logrus.Debug("fetch req ", req)
-	lowReq := &codec.FetchReq{}
-	lowReq.MaxBytes = req.MaxBytes
-	lowReq.MinBytes = req.MinBytes
-	lowReq.MaxWaitTime = req.MaxWaitTime
-	lowReq.TopicReqList = make([]*codec.FetchTopicReq, len(req.TopicReqList))
-	for i, topicReq := range req.TopicReqList {
+	for _, topicReq := range req.TopicReqList {
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}
-		lowTopicReq := &codec.FetchTopicReq{}
-		lowTopicReq.Topic = topicReq.Topic
-		lowTopicReq.PartitionReqList = topicReq.PartitionReqList
-		lowReq.ClientId = req.ClientId
-		lowReq.TopicReqList[i] = lowTopicReq
 	}
-	lowTopicRespList, err := s.kafsarImpl.Fetch(ctx.Addr, lowReq)
+	lowTopicRespList, err := s.kafsarImpl.Fetch(ctx.Addr, req)
 	if err != nil {
 		return nil, gnet.Close
 	}
 	resp := codec.NewFetchResp(req.CorrelationId)
-	resp.TopicRespList = make([]*codec.FetchTopicResp, len(lowTopicRespList))
+	resp.TopicRespList = lowTopicRespList
 	for i, lowTopicResp := range lowTopicRespList {
-		f := &codec.FetchTopicResp{}
-		f.Topic = lowTopicResp.Topic
-		f.PartitionRespList = make([]*codec.FetchPartitionResp, len(lowTopicResp.PartitionRespList))
-		for j, p := range lowTopicResp.PartitionRespList {
-			partitionResp := &codec.FetchPartitionResp{}
-			partitionResp.PartitionIndex = p.PartitionIndex
-			partitionResp.ErrorCode = p.ErrorCode
-			partitionResp.HighWatermark = p.HighWatermark
-			partitionResp.LastStableOffset = p.LastStableOffset
-			partitionResp.LogStartOffset = p.LogStartOffset
+		for _, p := range lowTopicResp.PartitionRespList {
 			if p.RecordBatch != nil {
-				partitionResp.RecordBatch = s.convertRecordBatchResp(p.RecordBatch)
+				p.RecordBatch = s.convertRecordBatchResp(p.RecordBatch)
 			}
-			partitionResp.AbortedTransactions = -1
-			partitionResp.ReplicaId = -1
-			f.PartitionRespList[j] = partitionResp
 		}
-		resp.TopicRespList[i] = f
+		resp.TopicRespList[i] = lowTopicResp
 	}
 	return resp, gnet.None
 }
