@@ -57,6 +57,7 @@ type ReaderMetadata struct {
 	channel    chan pulsar.ReaderMessage
 	reader     pulsar.Reader
 	messageIds *list.List
+	mutex      sync.RWMutex
 }
 
 type GroupStatus int

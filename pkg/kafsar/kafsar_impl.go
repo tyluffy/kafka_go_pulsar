@@ -293,10 +293,12 @@ OUT:
 			RelativeOffset: int(relativeOffset),
 		}
 		recordBatch.Records = append(recordBatch.Records, &record)
+		readerMetadata.mutex.Lock()
 		readerMetadata.messageIds.PushBack(MessageIdPair{
 			MessageId: message.ID(),
 			Offset:    offset,
 		})
+		readerMetadata.mutex.Unlock()
 		if byteLength > minBytes && time.Since(start).Milliseconds() >= int64(b.kafsarConfig.MinFetchWaitMs) {
 			break
 		}
@@ -558,9 +560,13 @@ func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic, clientID strin
 		return &codec.OffsetCommitPartitionResp{ErrorCode: codec.UNKNOWN_TOPIC_ID}, nil
 	}
 	b.mutex.RUnlock()
+	readerMessages.mutex.RLock()
 	length := readerMessages.messageIds.Len()
+	readerMessages.mutex.RUnlock()
 	for i := 0; i < length; i++ {
+		readerMessages.mutex.RLock()
 		front := readerMessages.messageIds.Front()
+		readerMessages.mutex.RUnlock()
 		if front == nil {
 			break
 		}
@@ -576,13 +582,17 @@ func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic, clientID strin
 				}, nil
 			}
 			logrus.Infof("ack pulsar %s for %s", partitionedTopic, messageIdPair.MessageId)
+			readerMessages.mutex.Lock()
 			readerMessages.messageIds.Remove(front)
+			readerMessages.mutex.Unlock()
 			break
 		}
 		if messageIdPair.Offset > req.Offset {
 			break
 		}
+		readerMessages.mutex.Lock()
 		readerMessages.messageIds.Remove(front)
+		readerMessages.mutex.Unlock()
 	}
 	return &codec.OffsetCommitPartitionResp{
 		PartitionId: req.PartitionId,
