@@ -218,7 +218,7 @@ func (s *Server) Metadata(c gnet.Conn, req *codec.MetadataReq) (*codec.MetadataR
 		return nil, gnet.Close
 	}
 	version := req.ApiVersion
-	if version == 1 || version == 8 || version == 9 {
+	if version <= 9 {
 		return s.ReactMetadata(networkContext, req, s.kafkaProtocolConfig)
 	}
 	logrus.Warn("Unsupported metadata version", version)
@@ -289,7 +289,7 @@ func (s *Server) SaslAuthenticate(c gnet.Conn, req *codec.SaslAuthenticateReq) (
 
 func (s *Server) SaslHandshake(c gnet.Conn, req *codec.SaslHandshakeReq) (*codec.SaslHandshakeResp, gnet.Action) {
 	version := req.ApiVersion
-	if version == 1 || version == 2 {
+	if version <= 1 {
 		return s.ReactSasl(req)
 	}
 	return nil, gnet.Close

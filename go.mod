@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/panjf2000/gnet v1.6.6
 	github.com/pkg/errors v0.9.1
-	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220822134158-0ce7d50577ad
+	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220831022652-60f516a34b0b
 	github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220821101129-d614d1874e5d
 	github.com/segmentio/kafka-go v0.4.34
 	github.com/sirupsen/logrus v1.9.0
@@ -71,7 +71,7 @@ require (
 	go.uber.org/zap v1.22.0 // indirect
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a // indirect
-	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
+	golang.org/x/sys v0.0.0-20220817070843-5a390386f1f2 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect

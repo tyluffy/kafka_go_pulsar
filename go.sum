@@ -446,8 +446,8 @@ github.com/prometheus/procfs v0.1.3/go.mod h1:lV6e/gmhEcM9IjHGsFOCxxuZ+z1YqCvr4O
 github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0VU=
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220822134158-0ce7d50577ad h1:C97xN8KUm7ncjEbnTrCEow90QTR/NNfOSKVNnbQW4/Y=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220822134158-0ce7d50577ad/go.mod h1:ee9DQZroF7JJQGmlbbZcaKarE/1R6wloJyEMbReklYc=
+github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220831022652-60f516a34b0b h1:0QfZwk2wJ/cn/zhjAHnO8XvfWDKD82AmSFveH8MfK3A=
+github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220831022652-60f516a34b0b/go.mod h1:f0dNgdubudV+JFMz9zE6jwODcpUnyib2KPngeuRP0PI=
 github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220821101129-d614d1874e5d h1:I0xYQPwKYM7JUQxs+38OHjFzgNYQi7hGki9Y0CYUOdw=
 github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220821101129-d614d1874e5d/go.mod h1:Lp6acxfY0uMhrRsHp1vqZVDKpm3OuZLIIH6/V40AWCQ=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
@@ -738,8 +738,8 @@ golang.org/x/sys v0.0.0-20220114195835-da31bd327af9/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab h1:2QkjZIsXupsJbJIdSjjUOgWK3aEtzyuh2mPt3l/CkeU=
-golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220817070843-5a390386f1f2 h1:fqTvyMIIj+HRzMmnzr9NtpHP6uVpvB5fkHcgPDC4nu8=
+golang.org/x/sys v0.0.0-20220817070843-5a390386f1f2/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 h1:JGgROgKl9N8DuW20oFS5gxc+lE67/N3FcwmBPMe7ArY=
