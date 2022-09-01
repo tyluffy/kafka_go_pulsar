@@ -1,11 +1,10 @@
-# 文件系统
+# file system
 .DS_Store
 
-# 编译器
+# ide
 .idea/**
 .vscode/**
 
-# 目标文件夹
 target/*
 
 # Binaries for programs and plugins

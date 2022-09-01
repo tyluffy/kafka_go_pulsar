@@ -18,7 +18,6 @@
 package main
 
 import (
-	"flag"
 	"github.com/paashzj/kafka_go_pulsar/pkg/kafsar"
 	"github.com/protocol-laboratory/kafka-codec-go/kgnet"
 	"os"
@@ -26,7 +25,6 @@ import (
 )
 
 func main() {
-	flag.Parse()
 	gnetConfig := kgnet.GnetServerConfig{
 		ListenHost:   "0.0.0.0",
 		ListenPort:   9092,
