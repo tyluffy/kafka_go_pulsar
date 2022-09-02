@@ -27,15 +27,23 @@ import (
 func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, config *KafkaProtocolConfig) (*codec.MetadataResp, gnet.Action) {
 	logrus.Debug("metadata req ", req)
 	topics := req.Topics
-	if len(topics) == 0 {
-		logrus.Warn("request metadata topic length is 0", ctx.Addr)
-		return nil, gnet.Close
-	}
+	topicList := make([]string, 0)
 	if len(topics) > 1 {
 		logrus.Error("currently, not support more than one topic", ctx.Addr)
 		return nil, gnet.Close
 	}
-	topic := topics[0].Topic
+	if len(topics) == 1 {
+		topicList = append(topicList, topics[0].Topic)
+	}
+	if len(topics) == 0 {
+		logrus.Warn("request metadata topic length is 0", ctx.Addr)
+		list, err := s.kafsarImpl.TopicList(ctx.Addr)
+		if err != nil {
+			return nil, gnet.Close
+		}
+		topicList = list
+	}
+
 	var metadataResp = &codec.MetadataResp{
 		BaseResp:                   codec.BaseResp{CorrelationId: req.CorrelationId},
 		ClusterId:                  config.ClusterId,
@@ -46,25 +54,27 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 		},
 	}
 
-	partitionNum, err := s.kafsarImpl.PartitionNum(ctx.Addr, topic)
-	if err != nil {
-		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
-		topicMetadata := codec.TopicMetadata{ErrorCode: codec.UNKNOWN_SERVER_ERROR, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
-		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
-		metadataResp.TopicMetadataList[0] = &topicMetadata
-	} else {
-		metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
-		topicMetadata := codec.TopicMetadata{ErrorCode: 0, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
-		topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, partitionNum)
-		for i := 0; i < partitionNum; i++ {
-			partitionMetadata := &codec.PartitionMetadata{ErrorCode: 0, PartitionId: i, LeaderId: config.NodeId, LeaderEpoch: 0, OfflineReplicas: nil}
-			replicas := make([]*codec.Replica, 1)
-			replicas[0] = &codec.Replica{ReplicaId: config.NodeId}
-			partitionMetadata.Replicas = replicas
-			partitionMetadata.CaughtReplicas = replicas
-			topicMetadata.PartitionMetadataList[i] = partitionMetadata
+	metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, len(topicList))
+	for index, topic := range topicList {
+		partitionNum, err := s.kafsarImpl.PartitionNum(ctx.Addr, topic)
+		if err != nil {
+			topicMetadata := codec.TopicMetadata{ErrorCode: codec.UNKNOWN_SERVER_ERROR, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
+			topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
+			metadataResp.TopicMetadataList[index] = &topicMetadata
+		} else {
+			metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
+			topicMetadata := codec.TopicMetadata{ErrorCode: 0, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
+			topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, partitionNum)
+			for i := 0; i < partitionNum; i++ {
+				partitionMetadata := &codec.PartitionMetadata{ErrorCode: 0, PartitionId: i, LeaderId: config.NodeId, LeaderEpoch: 0, OfflineReplicas: nil}
+				replicas := make([]*codec.Replica, 1)
+				replicas[0] = &codec.Replica{ReplicaId: config.NodeId}
+				partitionMetadata.Replicas = replicas
+				partitionMetadata.CaughtReplicas = replicas
+				topicMetadata.PartitionMetadataList[i] = partitionMetadata
+			}
+			metadataResp.TopicMetadataList[index] = &topicMetadata
 		}
-		metadataResp.TopicMetadataList[0] = &topicMetadata
 	}
 	return metadataResp, gnet.None
 }

@@ -31,5 +31,7 @@ type Server interface {
 
 	PartitionNum(username, topic string) (int, error)
 
+	ListTopic(username string) ([]string, error)
+
 	HasFlowQuota(username, topic string) bool
 }

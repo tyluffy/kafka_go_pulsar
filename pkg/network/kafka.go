@@ -32,6 +32,8 @@ import (
 type KafsarServer interface {
 	PartitionNum(addr net.Addr, topic string) (int, error)
 
+	TopicList(addr net.Addr) ([]string, error)
+
 	// Fetch method called this already authed
 	Fetch(addr net.Addr, req *codec.FetchReq) ([]*codec.FetchTopicResp, error)
 

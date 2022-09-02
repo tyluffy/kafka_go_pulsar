@@ -901,6 +901,22 @@ func (b *Broker) PartitionNum(addr net.Addr, kafkaTopic string) (int, error) {
 	return num, nil
 }
 
+func (b *Broker) TopicList(addr net.Addr) ([]string, error) {
+	b.mutex.RLock()
+	user, exist := b.userInfoManager[addr.String()]
+	b.mutex.RUnlock()
+	if !exist {
+		logrus.Errorf("get topics list failed. user not found. addr: %s", addr.String())
+		return nil, errors.New("user not found")
+	}
+	topic, err := b.server.ListTopic(user.username)
+	if err != nil {
+		logrus.Errorf("get topic list failed. err: %s", err)
+		return nil, err
+	}
+	return topic, nil
+}
+
 func (b *Broker) getPulsarHttpUrl() string {
 	return fmt.Sprintf("http://%s:%d", b.pulsarConfig.Host, b.pulsarConfig.HttpPort)
 }

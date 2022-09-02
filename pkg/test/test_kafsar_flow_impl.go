@@ -44,6 +44,10 @@ func (k FlowKafsarImpl) PartitionNum(username, topic string) (int, error) {
 	return 1, nil
 }
 
+func (k FlowKafsarImpl) ListTopic(username string) ([]string, error) {
+	return nil, nil
+}
+
 func (k FlowKafsarImpl) HasFlowQuota(username, topic string) bool {
 	return false
 }
