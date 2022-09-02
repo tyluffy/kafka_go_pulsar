@@ -216,7 +216,7 @@ func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req 
 	b.mutex.RLock()
 	user, exist := b.userInfoManager[addr.String()]
 	b.mutex.RUnlock()
-	var records []*codec.Record
+	records := make([]*codec.Record, 0)
 	recordBatch := codec.RecordBatch{Records: records}
 	if !exist {
 		logrus.Errorf("fetch partition failed when get userinfo by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
