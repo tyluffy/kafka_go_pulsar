@@ -30,7 +30,7 @@ type GroupCoordinator interface {
 
 	HandleLeaveGroup(username, groupId string, members []*codec.LeaveGroupMember) (*codec.LeaveGroupResp, error)
 
-	HandleHeartBeat(username, groupId string) *codec.HeartbeatResp
+	HandleHeartBeat(username, groupId, memberId string) *codec.HeartbeatResp
 
 	GetGroup(username, groupId string) (*Group, error)
 }

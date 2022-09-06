@@ -46,6 +46,6 @@ func (gcc *GroupCoordinatorCluster) HandleLeaveGroup(username, groupId string,
 func (gcc *GroupCoordinatorCluster) GetGroup(username, groupId string) (*Group, error) {
 	panic("implement get group")
 }
-func (gcc *GroupCoordinatorCluster) HandleHeartBeat(username, groupId string) *codec.HeartbeatResp {
+func (gcc *GroupCoordinatorCluster) HandleHeartBeat(username, groupId, memberId string) *codec.HeartbeatResp {
 	panic("implement handle heart beat")
 }

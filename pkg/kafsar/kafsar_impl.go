@@ -246,7 +246,11 @@ func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req 
 			if err == nil && group.groupStatus != Stable {
 				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
 				return &codec.FetchPartitionResp{
-					ErrorCode: codec.REBALANCE_IN_PROGRESS,
+					LastStableOffset: 0,
+					ErrorCode:        codec.NONE,
+					LogStartOffset:   0,
+					RecordBatch:      &recordBatch,
+					PartitionIndex:   req.PartitionId,
 				}
 			}
 		}
@@ -453,7 +457,8 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 	if !exist {
 		logrus.Errorf("offset list failed when get username by addr %s, kafka topic: %s", addr.String(), kafkaTopic)
 		return &codec.ListOffsetsPartitionResp{
-			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+			PartitionId: req.PartitionId,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	logrus.Infof("%s offset list topic: %s, partition: %d", addr.String(), kafkaTopic, req.PartitionId)
@@ -461,7 +466,8 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 	if err != nil {
 		logrus.Errorf("get topic failed. err: %s", err)
 		return &codec.ListOffsetsPartitionResp{
-			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+			PartitionId: req.PartitionId,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	b.mutex.RLock()
@@ -474,13 +480,17 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 			if err == nil && group.groupStatus != Stable {
 				logrus.Infof("group is preparing rebalance. grouId: %s, topic: %s", groupId, partitionedTopic)
 				return &codec.ListOffsetsPartitionResp{
-					ErrorCode: codec.REBALANCE_IN_PROGRESS,
+					PartitionId: req.PartitionId,
+					ErrorCode:   codec.LEADER_NOT_AVAILABLE,
+					Timestamp:   constant.TimeEarliest,
 				}, nil
 			}
 		}
 		logrus.Errorf("get pulsar client failed. err: %v", err)
 		return &codec.ListOffsetsPartitionResp{
-			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+			PartitionId: req.PartitionId,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
+			Timestamp:   constant.TimeEarliest,
 		}, nil
 	}
 	readerMessages, exist := b.readerManager[partitionedTopic+clientID]
@@ -488,7 +498,8 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 	if !exist {
 		logrus.Errorf("offset list failed, topic: %s, does not exist", partitionedTopic)
 		return &codec.ListOffsetsPartitionResp{
-			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+			PartitionId: req.PartitionId,
+			ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 		}, nil
 	}
 	offset := constant.DefaultOffset
@@ -497,14 +508,16 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 		if err != nil {
 			logrus.Errorf("get topic %s latest offset failed %s\n", kafkaTopic, err)
 			return &codec.ListOffsetsPartitionResp{
-				ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+				PartitionId: req.PartitionId,
+				ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
 		lastedMsg, err := utils.ReadLastedMsg(partitionedTopic, b.kafsarConfig.MaxFetchWaitMs, msg, client)
 		if err != nil {
 			logrus.Errorf("read lasted msg failed. topic: %s, err: %s", kafkaTopic, err)
 			return &codec.ListOffsetsPartitionResp{
-				ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+				PartitionId: req.PartitionId,
+				ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
 		if lastedMsg != nil {
@@ -512,7 +525,8 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 			if err != nil {
 				logrus.Errorf("offset list failed, topic: %s, err: %s", partitionedTopic, err)
 				return &codec.ListOffsetsPartitionResp{
-					ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+					PartitionId: req.PartitionId,
+					ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 				}, nil
 			}
 			offset = convOffset(lastedMsg, b.kafsarConfig.ContinuousOffset)
@@ -857,7 +871,7 @@ func (b *Broker) HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.Heartbe
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}
 	}
-	resp := b.groupCoordinator.HandleHeartBeat(user.username, req.GroupId)
+	resp := b.groupCoordinator.HandleHeartBeat(user.username, req.GroupId, req.MemberId)
 	if resp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
 		group, err := b.groupCoordinator.GetGroup(user.username, req.GroupId)
 		if err != nil {

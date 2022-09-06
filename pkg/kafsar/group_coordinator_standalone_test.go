@@ -55,7 +55,7 @@ func TestHandleJoinGroup(t *testing.T) {
 	}
 	assert.Equal(t, CompletingRebalance, group.groupStatus)
 
-	resp, err = groupCoordinator.HandleJoinGroup(testUsername, "test-group-id-2", memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+	resp, err = groupCoordinator.HandleJoinGroup(testUsername, "test-group-id-2", resp.MemberId, clientId, protocolType, sessionTimeoutMs, protocols)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestNotifyReJoinGroup(t *testing.T) {
 
 	go func() {
 		time.Sleep(3500 * time.Millisecond)
-		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId, resp1.MemberId)
 		assert.Equal(t, codec.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
 	}()
 
@@ -144,7 +144,7 @@ func TestNotifyReJoinGroup(t *testing.T) {
 	waitGroup.Add(2)
 	go func() {
 		// other member join
-		resp2, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
+		resp2, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, "", clientId, protocolType, sessionTimeoutMs, protocols)
 		assert.Nil(t, err)
 		assert.Equal(t, codec.NONE, resp2.ErrorCode)
 		waitGroup.Done()
@@ -152,7 +152,7 @@ func TestNotifyReJoinGroup(t *testing.T) {
 	go func() {
 		// leader heartbeat
 		time.Sleep(3500 * time.Millisecond)
-		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId, resp1.MemberId)
 		assert.Equal(t, codec.REBALANCE_IN_PROGRESS, heartBeatResp.ErrorCode)
 		// leader join
 		resp3, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, group.leader, clientId, protocolType, sessionTimeoutMs, protocols)
@@ -224,7 +224,7 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 	for {
 		time.Sleep(time.Second)
 		// one member heartbeat
-		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+		heartBeatResp := groupCoordinator.HandleHeartBeat(testUsername, groupId, resp.MemberId)
 		if heartBeatResp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
 			// one member reJoin, it must be leader
 			resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, group.leader, clientId, protocolType, sessionTimeoutMs, protocols)
@@ -402,29 +402,41 @@ func TestMultiConsumerLeaveGroup(t *testing.T) {
 
 func TestHeartBeatRebalanceInProgress(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
+	testMemberId := "test_memberId"
+	members := make(map[string]*memberMetadata)
+	members[testMemberId] = &memberMetadata{
+		memberId: testMemberId,
+	}
 	groupCoordinator.groupManager[testUsername+groupId] = &Group{
 		groupId:     groupId,
 		groupStatus: PreparingRebalance,
+		members:     members,
 	}
 
-	resp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+	resp := groupCoordinator.HandleHeartBeat(testUsername, groupId, testMemberId)
 	assert.Equal(t, resp.ErrorCode, codec.REBALANCE_IN_PROGRESS)
 }
 
 func TestHeartBeatInvalidGroupId(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
-	resp := groupCoordinator.HandleHeartBeat(testUsername, "")
+	resp := groupCoordinator.HandleHeartBeat(testUsername, "", "")
 	assert.Equal(t, resp.ErrorCode, codec.INVALID_GROUP_ID)
-	resp = groupCoordinator.HandleHeartBeat(testUsername, "no_group_id")
+	resp = groupCoordinator.HandleHeartBeat(testUsername, "no_group_id", "")
 	assert.Equal(t, resp.ErrorCode, codec.REBALANCE_IN_PROGRESS)
 }
 
 func TestHeartBeatNone(t *testing.T) {
 	groupCoordinator := NewGroupCoordinatorStandalone(PulsarConfig{}, kafsarConfig, nil)
+	testMemberId := "test_memberId_beat_none"
+	members := make(map[string]*memberMetadata)
+	members[testMemberId] = &memberMetadata{
+		memberId: testMemberId,
+	}
 	groupCoordinator.groupManager[testUsername+groupId] = &Group{
 		groupId:     groupId,
 		groupStatus: Empty,
+		members:     members,
 	}
-	resp := groupCoordinator.HandleHeartBeat(testUsername, groupId)
+	resp := groupCoordinator.HandleHeartBeat(testUsername, groupId, testMemberId)
 	assert.Equal(t, resp.ErrorCode, codec.NONE)
 }

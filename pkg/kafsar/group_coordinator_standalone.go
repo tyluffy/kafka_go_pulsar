@@ -387,7 +387,7 @@ func (g *GroupCoordinatorStandalone) updateMemberAndRebalance(group *Group, clie
 	return g.doRebalance(group, rebalanceDelayMs)
 }
 
-func (g *GroupCoordinatorStandalone) HandleHeartBeat(username, groupId string) *codec.HeartbeatResp {
+func (g *GroupCoordinatorStandalone) HandleHeartBeat(username, groupId, memberId string) *codec.HeartbeatResp {
 	if groupId == "" {
 		logrus.Errorf("groupId is empty.")
 		return &codec.HeartbeatResp{
@@ -396,13 +396,24 @@ func (g *GroupCoordinatorStandalone) HandleHeartBeat(username, groupId string) *
 	}
 	g.mutex.RLock()
 	group, exist := g.groupManager[username+groupId]
-	g.mutex.RUnlock()
 	if !exist {
+		g.mutex.RUnlock()
 		logrus.Errorf("get group failed. cause group not exist, groupId: %s", groupId)
 		return &codec.HeartbeatResp{
 			ErrorCode: codec.REBALANCE_IN_PROGRESS,
 		}
 	}
+	group.groupMemberLock.RLock()
+	_, memberExist := group.members[memberId]
+	group.groupMemberLock.RUnlock()
+	if !memberExist {
+		g.mutex.RUnlock()
+		logrus.Errorf("get member failed. cause member not exist, groupId: %s, memberId: %s", groupId, memberId)
+		return &codec.HeartbeatResp{
+			ErrorCode: codec.REBALANCE_IN_PROGRESS,
+		}
+	}
+	g.mutex.RUnlock()
 	if g.getGroupStatus(group) == PreparingRebalance || g.getGroupStatus(group) == CompletingRebalance || g.getGroupStatus(group) == Dead {
 		logrus.Infof("preparing rebalance. groupId: %s", groupId)
 		return &codec.HeartbeatResp{
