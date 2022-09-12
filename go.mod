@@ -14,7 +14,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220902054053-d297c4f9a425
 	github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20220901064955-53b5f3eb5325
-	github.com/segmentio/kafka-go v0.4.34
+	github.com/segmentio/kafka-go v0.4.35
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/otel v1.9.0
