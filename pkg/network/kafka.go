@@ -114,10 +114,13 @@ func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 func (s *Server) OnClosed(c gnet.Conn, err error) (action gnet.Action) {
 	logrus.Info("connection closed from ", c.RemoteAddr())
 	s.kafsarImpl.Disconnect(c.RemoteAddr())
+	if err := c.Close(); err != nil {
+		logrus.Errorf("close connection %s failed: %s", c.RemoteAddr(), err.Error())
+	}
 	s.ConnMap.Delete(c.RemoteAddr())
 	s.SaslMap.Delete(c.RemoteAddr())
 	atomic.AddInt32(&s.connCount, -1)
-	return
+	return gnet.Close
 }
 
 func (s *Server) InvalidKafkaPacket(c gnet.Conn) {

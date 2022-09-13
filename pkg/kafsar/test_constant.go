@@ -30,7 +30,7 @@ const (
 var (
 	protocol = codec.GroupProtocol{
 		ProtocolName:     "range",
-		ProtocolMetadata: "000100000001000474657374ffffffff00000000",
+		ProtocolMetadata: []byte("000100000001000474657374ffffffff00000000"),
 	}
 	groupProtocol []*codec.GroupProtocol
 	protocols     = append(groupProtocol, &protocol)

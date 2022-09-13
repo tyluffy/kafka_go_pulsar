@@ -40,6 +40,7 @@ var (
 		InitialDelayedJoinMs:     3000,
 		RebalanceTickMs:          100,
 	}
+	rebalanceLock = sync.Mutex{}
 )
 
 func TestHandleJoinGroup(t *testing.T) {
@@ -199,6 +200,7 @@ func TestHandleJoinGroupMultiMember(t *testing.T) {
 }
 
 func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorStandalone, waitGroup *sync.WaitGroup) {
+	rebalanceLock.Lock()
 	// one member join
 	resp, err := groupCoordinator.HandleJoinGroup(testUsername, groupId, memberId, clientId, protocolType, sessionTimeoutMs, protocols)
 	assert.Nil(t, err)
@@ -221,6 +223,7 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 	_, err = groupCoordinator.HandleSyncGroup(testUsername, groupId, resp.MemberId, group.generationId, groupAssignments)
 	assert.Nil(t, err)
 	waitGroup.Done()
+	rebalanceLock.Unlock()
 	for {
 		time.Sleep(time.Second)
 		// one member heartbeat

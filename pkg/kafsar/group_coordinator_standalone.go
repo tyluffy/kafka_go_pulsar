@@ -298,7 +298,6 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 			ErrorCode:        codec.NONE,
 			MemberAssignment: curMemberAssignment,
 		}, nil
-
 	}
 
 	// if the group is stable, we just return the current assignment
@@ -364,7 +363,7 @@ func (g *GroupCoordinatorStandalone) addMemberAndRebalance(group *Group, clientI
 	if memberId == EmptyMemberId {
 		memberId = clientId + "-" + uuid.New().String()
 	}
-	protocolMap := make(map[string]string)
+	protocolMap := make(map[string][]byte)
 	for i := range protocols {
 		protocolMap[protocols[i].ProtocolName] = protocols[i].ProtocolMetadata
 	}

@@ -44,10 +44,10 @@ type Group struct {
 type memberMetadata struct {
 	clientId         string
 	memberId         string
-	metadata         string
+	metadata         []byte
 	assignment       []byte
 	protocolType     string
-	protocols        map[string]string
+	protocols        map[string][]byte
 	joinGenerationId int
 	syncGenerationId int
 }
