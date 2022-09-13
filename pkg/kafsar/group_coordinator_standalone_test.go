@@ -212,7 +212,7 @@ func oneMemberRebalanceHandler(t *testing.T, groupCoordinator *GroupCoordinatorS
 		for memberId := range members {
 			g := &codec.GroupAssignment{}
 			g.MemberId = memberId
-			g.MemberAssignment = "testAssignment: " + memberId
+			g.MemberAssignment = []byte("testAssignment: " + memberId)
 			groupAssignments[i] = g
 			i++
 		}
@@ -287,7 +287,7 @@ func TestHandleSyncGroup(t *testing.T) {
 	memberId = joinGroupResp.MemberId
 	assignment := codec.GroupAssignment{
 		MemberId:         memberId,
-		MemberAssignment: "0001000000010004746573740000000100000000ffffffff",
+		MemberAssignment: []byte("0001000000010004746573740000000100000000ffffffff"),
 	}
 	var groupAssignment []*codec.GroupAssignment
 	groupAssignments := append(groupAssignment, &assignment)
@@ -310,7 +310,7 @@ func TestHandleSyncGroupInvalidParams(t *testing.T) {
 	memberId = joinGroupResp.MemberId
 	assignment := codec.GroupAssignment{
 		MemberId:         memberId,
-		MemberAssignment: "0001000000010004746573740000000100000000ffffffff",
+		MemberAssignment: []byte("0001000000010004746573740000000100000000ffffffff"),
 	}
 	var groupAssignment []*codec.GroupAssignment
 	groupAssignments := append(groupAssignment, &assignment)

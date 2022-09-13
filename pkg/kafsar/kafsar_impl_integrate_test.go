@@ -882,7 +882,7 @@ func TestMultiMemberLeaveGroup(t *testing.T) {
 	groupAssignments := make([]*codec.GroupAssignment, 1)
 	g := &codec.GroupAssignment{}
 	g.MemberId = joinGroupResp.MemberId
-	g.MemberAssignment = "testAssignment: " + joinGroupResp.MemberId
+	g.MemberAssignment = []byte("testAssignment: " + joinGroupResp.MemberId)
 	groupAssignments[0] = g
 
 	syncReq := codec.SyncGroupReq{

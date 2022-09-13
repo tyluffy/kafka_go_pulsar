@@ -281,7 +281,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 			g.setGroupStatus(group, Stable)
 		}
 		group.groupMemberLock.RLock()
-		curMemberAssignment := string(group.members[memberId].assignment)
+		curMemberAssignment := group.members[memberId].assignment
 		group.groupMemberLock.RUnlock()
 		if err != nil {
 			logrus.Errorf("member %s sync group %s failed, cause: %s", memberId, groupId, err)
@@ -305,7 +305,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 	if g.getGroupStatus(group) == Stable {
 		return &codec.SyncGroupResp{
 			ErrorCode:        codec.NONE,
-			MemberAssignment: string(group.members[memberId].assignment),
+			MemberAssignment: group.members[memberId].assignment,
 		}, nil
 	}
 	return &codec.SyncGroupResp{
