@@ -270,7 +270,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 		if g.isMemberLeader(group, memberId) {
 			for i := range groupAssignments {
 				logrus.Infof("Assignment %#+v received from leader %s for group %s for generation %d", groupAssignments[i], memberId, groupId, generation)
-				group.members[groupAssignments[i].MemberId].assignment = []byte(groupAssignments[i].MemberAssignment)
+				group.members[groupAssignments[i].MemberId].assignment = groupAssignments[i].MemberAssignment
 			}
 		}
 		group.groupMemberLock.Lock()

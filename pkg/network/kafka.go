@@ -112,7 +112,10 @@ func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 }
 
 func (s *Server) OnClosed(c gnet.Conn, err error) (action gnet.Action) {
-	logrus.Info("connection closed from ", c.RemoteAddr())
+	logrus.Infof("connection closed from %s", c.RemoteAddr())
+	if err != nil {
+		logrus.Errorf("abnormal connect, error: %v", err)
+	}
 	s.kafsarImpl.Disconnect(c.RemoteAddr())
 	if err := c.Close(); err != nil {
 		logrus.Errorf("close connection %s failed: %s", c.RemoteAddr(), err.Error())
@@ -124,15 +127,15 @@ func (s *Server) OnClosed(c gnet.Conn, err error) (action gnet.Action) {
 }
 
 func (s *Server) InvalidKafkaPacket(c gnet.Conn) {
-	logrus.Error("invalid data packet", c.RemoteAddr())
+	logrus.Errorf("invalid data packet %s", c.RemoteAddr())
 }
 
 func (s *Server) ConnError(c gnet.Conn, err error) {
-	logrus.Warn("conn error", c.RemoteAddr(), err)
+	logrus.Warnf("%s connect error: %+v", c.RemoteAddr(), err)
 }
 
 func (s *Server) UnSupportedApi(c gnet.Conn, apiKey codec.ApiCode, apiVersion int16) {
-	logrus.Error("unsupported api ", c.RemoteAddr(), apiKey, apiVersion)
+	logrus.Errorf("%s connect unsupported api, key: %d, version: %d", c.RemoteAddr(), apiKey, apiVersion)
 }
 
 func (s *Server) ApiVersion(c gnet.Conn, req *codec.ApiReq) (*codec.ApiResp, gnet.Action) {
@@ -140,7 +143,7 @@ func (s *Server) ApiVersion(c gnet.Conn, req *codec.ApiReq) (*codec.ApiResp, gne
 	if version <= 3 {
 		return s.ReactApiVersion(req)
 	}
-	logrus.Warn("Unsupported apiVersion version", version)
+	logrus.Warnf("unsupported apiVersion version %d", version)
 	return nil, gnet.Close
 }
 
