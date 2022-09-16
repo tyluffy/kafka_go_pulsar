@@ -254,11 +254,14 @@ func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req 
 				}
 			}
 		}
-		logrus.Errorf("can not find reader for topic: %s when fetch partition %s", partitionedTopic, partitionedTopic+clientID)
+		// Maybe this partition-topic is already assigned to another member
+		logrus.Warnf("can not find reader for topic: %s when fetch partition %s", partitionedTopic, partitionedTopic+clientID)
 		return &codec.FetchPartitionResp{
-			PartitionIndex: req.PartitionId,
-			ErrorCode:      codec.UNKNOWN_SERVER_ERROR,
-			RecordBatch:    &recordBatch,
+			LastStableOffset: 0,
+			ErrorCode:        codec.NONE,
+			LogStartOffset:   0,
+			RecordBatch:      &recordBatch,
+			PartitionIndex:   req.PartitionId,
 		}
 	}
 	b.mutex.RUnlock()
@@ -570,8 +573,8 @@ func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic, clientID strin
 				return &codec.OffsetCommitPartitionResp{ErrorCode: codec.REBALANCE_IN_PROGRESS}, nil
 			}
 		}
-		logrus.Errorf("commit offset failed, topic: %s, does not exist", partitionedTopic)
-		return &codec.OffsetCommitPartitionResp{ErrorCode: codec.UNKNOWN_TOPIC_ID}, nil
+		logrus.Warnf("commit offset failed, topic: %s, does not exist", partitionedTopic)
+		return &codec.OffsetCommitPartitionResp{ErrorCode: codec.REBALANCE_IN_PROGRESS}, nil
 	}
 	b.mutex.RUnlock()
 	readerMessages.mutex.RLock()
@@ -866,7 +869,7 @@ func (b *Broker) HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.Heartbe
 	user, exist := b.userInfoManager[addr.String()]
 	b.mutex.RUnlock()
 	if !exist {
-		logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
+		logrus.Errorf("HeartBeat failed when get userinfo by addr %s", addr.String())
 		return &codec.HeartbeatResp{
 			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 		}
@@ -875,7 +878,7 @@ func (b *Broker) HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.Heartbe
 	if resp.ErrorCode == codec.REBALANCE_IN_PROGRESS {
 		group, err := b.groupCoordinator.GetGroup(user.username, req.GroupId)
 		if err != nil {
-			logrus.Errorf("offset fetch failed when get userinfo by addr %s", addr.String())
+			logrus.Errorf("HeartBeat failed when get group by addr %s", addr.String())
 			return resp
 		}
 		for _, topic := range group.partitionedTopic {
@@ -883,7 +886,7 @@ func (b *Broker) HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.Heartbe
 			readerMetadata, exist := b.readerManager[topic+req.ClientId]
 			if exist {
 				readerMetadata.reader.Close()
-				logrus.Infof("success close reader topic: %s", group.partitionedTopic)
+				logrus.Infof("success close reader topic by heartbeat rebalance: %s", group.partitionedTopic)
 				delete(b.readerManager, topic+req.ClientId)
 				readerMetadata = nil
 			}

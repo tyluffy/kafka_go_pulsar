@@ -84,7 +84,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			groupId, memberId, numMember, g.kafsarConfig.MaxConsumersPerGroup)
 		return &codec.JoinGroupResp{
 			MemberId:  memberId,
-			ErrorCode: codec.UNKNOWN_SERVER_ERROR,
+			ErrorCode: codec.GROUP_MAX_SIZE_REACHED,
 		}, nil
 	}
 
@@ -103,7 +103,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &codec.JoinGroupResp{
 					MemberId:  memberId,
-					ErrorCode: codec.REBALANCE_IN_PROGRESS,
+					ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 				}, nil
 			}
 		}
@@ -115,7 +115,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			}
 			return &codec.JoinGroupResp{
 				MemberId:  memberId,
-				ErrorCode: codec.REBALANCE_IN_PROGRESS,
+				ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 			}, nil
 		}
 		members := g.getLeaderMembers(group, memberId)
@@ -137,7 +137,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &codec.JoinGroupResp{
 					MemberId:  memberId,
-					ErrorCode: codec.REBALANCE_IN_PROGRESS,
+					ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 				}, nil
 			}
 		} else {
@@ -148,7 +148,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 					return &codec.JoinGroupResp{
 						MemberId:  memberId,
-						ErrorCode: codec.REBALANCE_IN_PROGRESS,
+						ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 					}, nil
 				}
 			}
@@ -162,7 +162,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			}
 			return &codec.JoinGroupResp{
 				MemberId:  memberId,
-				ErrorCode: codec.REBALANCE_IN_PROGRESS,
+				ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 			}, nil
 		}
 		return &codec.JoinGroupResp{
@@ -184,7 +184,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 				logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 				return &codec.JoinGroupResp{
 					MemberId:  memberId,
-					ErrorCode: codec.REBALANCE_IN_PROGRESS,
+					ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 				}, nil
 			}
 		} else {
@@ -194,7 +194,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 					logrus.Errorf("member %s join group %s failed, cause: %s", memberId, groupId, err)
 					return &codec.JoinGroupResp{
 						MemberId:  memberId,
-						ErrorCode: codec.REBALANCE_IN_PROGRESS,
+						ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 					}, nil
 				}
 			}
@@ -207,7 +207,7 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			}
 			return &codec.JoinGroupResp{
 				MemberId:  memberId,
-				ErrorCode: codec.REBALANCE_IN_PROGRESS,
+				ErrorCode: codec.COORDINATOR_LOAD_IN_PROGRESS,
 			}, nil
 		}
 		members := g.getLeaderMembers(group, memberId)
@@ -243,7 +243,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 			ErrorCode: codec.INVALID_GROUP_ID,
 		}, nil
 	}
-	_, exist = group.members[memberId]
+	curMember, exist := group.members[memberId]
 	if !exist {
 		logrus.Errorf("sync group %s failed, cause invalid memberId %s", groupId, memberId)
 		return &codec.SyncGroupResp{
@@ -274,14 +274,14 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 			}
 		}
 		group.groupMemberLock.Lock()
-		group.members[memberId].syncGenerationId = group.members[memberId].joinGenerationId
+		curMember.syncGenerationId = curMember.joinGenerationId
 		group.groupMemberLock.Unlock()
 		err := g.awaitingSync(group, g.kafsarConfig.RebalanceTickMs, group.sessionTimeoutMs, memberId)
 		if g.isMemberLeader(group, memberId) {
 			g.setGroupStatus(group, Stable)
 		}
 		group.groupMemberLock.RLock()
-		curMemberAssignment := group.members[memberId].assignment
+		curMemberAssignment := curMember.assignment
 		group.groupMemberLock.RUnlock()
 		if err != nil {
 			logrus.Errorf("member %s sync group %s failed, cause: %s", memberId, groupId, err)
@@ -304,7 +304,7 @@ func (g *GroupCoordinatorStandalone) HandleSyncGroup(username, groupId, memberId
 	if g.getGroupStatus(group) == Stable {
 		return &codec.SyncGroupResp{
 			ErrorCode:        codec.NONE,
-			MemberAssignment: group.members[memberId].assignment,
+			MemberAssignment: curMember.assignment,
 		}, nil
 	}
 	return &codec.SyncGroupResp{
@@ -397,7 +397,8 @@ func (g *GroupCoordinatorStandalone) HandleHeartBeat(username, groupId, memberId
 	group, exist := g.groupManager[username+groupId]
 	if !exist {
 		g.mutex.RUnlock()
-		logrus.Errorf("get group failed. cause group not exist, groupId: %s", groupId)
+		// the group will not exist when the broker restart, rebalance is required
+		logrus.Warningf("get group failed. cause group not exist, groupId: %s", groupId)
 		return &codec.HeartbeatResp{
 			ErrorCode: codec.REBALANCE_IN_PROGRESS,
 		}
@@ -407,7 +408,7 @@ func (g *GroupCoordinatorStandalone) HandleHeartBeat(username, groupId, memberId
 	group.groupMemberLock.RUnlock()
 	if !memberExist {
 		g.mutex.RUnlock()
-		logrus.Errorf("get member failed. cause member not exist, groupId: %s, memberId: %s", groupId, memberId)
+		logrus.Warningf("get member failed. cause member not exist, groupId: %s, memberId: %s", groupId, memberId)
 		return &codec.HeartbeatResp{
 			ErrorCode: codec.REBALANCE_IN_PROGRESS,
 		}
@@ -455,7 +456,7 @@ func (g *GroupCoordinatorStandalone) vote(group *Group, protocols []*codec.Group
 func (g *GroupCoordinatorStandalone) awaitingRebalance(group *Group, rebalanceTickMs int, sessionTimeout int, waitForStatus GroupStatus) error {
 	start := time.Now()
 	for {
-		if g.getGroupStatus(group) == waitForStatus {
+		if g.getGroupStatus(group) == waitForStatus || g.getGroupMembersLen(group) == 0 {
 			return nil
 		}
 		if time.Since(start).Milliseconds() >= int64(sessionTimeout) {
@@ -594,9 +595,13 @@ func (g *GroupCoordinatorStandalone) awaitingJoin(group *Group, memberId string,
 	start := time.Now()
 	for {
 		groupGenerationId := g.getGroupGenerationId(group)
+		curMember := group.members[memberId]
+		if curMember == nil {
+			return errors.Errorf("cur member missing when awaitingJoin.")
+		}
 		group.groupMemberLock.Lock()
-		if group.members[memberId].joinGenerationId != groupGenerationId {
-			group.members[memberId].joinGenerationId = groupGenerationId
+		if curMember.joinGenerationId != groupGenerationId {
+			curMember.joinGenerationId = groupGenerationId
 		}
 		group.groupMemberLock.Unlock()
 		if g.checkJoinMemberGenerationId(group, memberId) {
