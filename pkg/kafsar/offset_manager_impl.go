@@ -91,10 +91,8 @@ func (o *OffsetManagerImpl) startOffsetConsumer(c chan bool) {
 			publishTime := receive.PublishTime()
 			// At present, the three abnormal scenarios can be directly ack
 			if err := receive.Ack(receive.Message); err != nil {
-				o.checkTime(msg, publishTime, c)
 				logrus.Errorf("ack message failed. key: %s, topic: %s, error: %s",
 					receive.Key(), receive.Topic(), err.Error())
-				continue
 			}
 			if len(payload) == 0 {
 				o.checkTime(msg, publishTime, c)
