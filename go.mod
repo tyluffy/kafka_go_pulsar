@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/SkyAPM/go2sky v1.5.0
 	github.com/apache/pulsar-client-go v0.9.0
-	github.com/docker/docker v20.10.20+incompatible
+	github.com/docker/docker v20.10.21+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
