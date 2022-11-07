@@ -47,7 +47,7 @@ func SetupPulsar() {
 		}
 		resp, err := http.Get("http://localhost:8080/admin/v2/brokers/health")
 		if err != nil {
-			logrus.Error("connect pulsar error ")
+			logrus.Errorf("connect pulsar failed: %s", err.Error())
 			once.Do(startPulsar)
 			time.Sleep(15 * time.Second)
 			continue

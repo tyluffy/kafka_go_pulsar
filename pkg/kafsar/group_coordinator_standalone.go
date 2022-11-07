@@ -211,9 +211,13 @@ func (g *GroupCoordinatorStandalone) HandleJoinGroup(username, groupId, memberId
 			}, nil
 		}
 		members := g.getLeaderMembers(group, memberId)
+		var generationId int
+		group.groupLock.Lock()
+		generationId = group.generationId
+		group.groupLock.Unlock()
 		return &codec.JoinGroupResp{
 			ErrorCode:    codec.NONE,
-			GenerationId: group.generationId,
+			GenerationId: generationId,
 			ProtocolType: &group.protocolType,
 			ProtocolName: group.supportedProtocol,
 			LeaderId:     g.getMemberLeader(group),
