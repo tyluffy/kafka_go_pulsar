@@ -388,8 +388,8 @@ github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/procfs v0.8.0 h1:ODq8ZFEaYeCaZOJlZZdJA2AbQR98dSHSM1KW/You5mo=
 github.com/prometheus/procfs v0.8.0/go.mod h1:z7EfXMXOkbkqb9IINtpCn86r/to3BnA0uaxHdg830/4=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220913073239-7a330e82b36e h1:X+8Pzaq5rzbgrNUcPwWeJYcDEHqvbB/wpD9E118eRkw=
-github.com/protocol-laboratory/kafka-codec-go v0.0.0-20220913073239-7a330e82b36e/go.mod h1:f0dNgdubudV+JFMz9zE6jwODcpUnyib2KPngeuRP0PI=
+github.com/protocol-laboratory/kafka-codec-go v0.0.0-20221115010753-95967d2dd03f h1:lmv/dzrGQER2wpMGGLVOd7K1AKG0Vq49/4TEYWe9wzg=
+github.com/protocol-laboratory/kafka-codec-go v0.0.0-20221115010753-95967d2dd03f/go.mod h1:f0dNgdubudV+JFMz9zE6jwODcpUnyib2KPngeuRP0PI=
 github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20221012004921-e001bc05e13a h1:5iEichySI6tdU49aS9eXkPkEzcsYlx7sZOa4Vd/gzLk=
 github.com/protocol-laboratory/pulsar-codec-go v0.0.0-20221012004921-e001bc05e13a/go.mod h1:Ba9AmOJW7cxMMCHqF5yAA7lSVIqZ3nFn9ZpJlCiWelA=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
