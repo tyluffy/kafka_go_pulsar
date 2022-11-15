@@ -133,20 +133,25 @@ func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *c
 	span := b.tracer.NewSpan(context.Background(), "Produce", "broker produce msg starting")
 	b.tracer.SetAttribute(span, "action", "Produce")
 	defer b.tracer.EndSpan(span, fmt.Sprintf("produce msg %s:%d", kafkaTopic, partition))
+	errList := make([]*codec.RecordError, 0)
 	b.mutex.RLock()
 	user, exist := b.userInfoManager[addr.String()]
 	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("user not exist. username: %s, kafkaTopic: %s", user.username, kafkaTopic)
 		return &codec.ProducePartitionResp{
-			ErrorCode: codec.TOPIC_AUTHORIZATION_FAILED,
+			ErrorCode:       codec.TOPIC_AUTHORIZATION_FAILED,
+			RecordErrorList: errList,
+			PartitionId:     req.PartitionId,
 		}, nil
 	}
 	producer, err := b.getProducer(addr, user.username, kafkaTopic)
 	if err != nil {
 		logrus.Errorf("create producer failed. username: %s, kafkaTopic: %s", user.username, kafkaTopic)
 		return &codec.ProducePartitionResp{
-			ErrorCode: codec.TOPIC_AUTHORIZATION_FAILED,
+			ErrorCode:       codec.TOPIC_AUTHORIZATION_FAILED,
+			RecordErrorList: errList,
+			PartitionId:     req.PartitionId,
 		}, nil
 	}
 	batch := req.RecordBatch.Records
@@ -175,7 +180,7 @@ func (b *Broker) Produce(addr net.Addr, kafkaTopic string, partition int, req *c
 		PartitionId:     partition,
 		Offset:          offset,
 		Time:            -1,
-		RecordErrorList: nil,
+		RecordErrorList: errList,
 		LogStartOffset:  0,
 	}, nil
 

@@ -62,7 +62,6 @@ func (s *Server) ReactMetadata(ctx *ctx.NetworkContext, req *codec.MetadataReq, 
 			topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, 0)
 			metadataResp.TopicMetadataList[index] = &topicMetadata
 		} else {
-			metadataResp.TopicMetadataList = make([]*codec.TopicMetadata, 1)
 			topicMetadata := codec.TopicMetadata{ErrorCode: 0, Topic: topic, IsInternal: false, TopicAuthorizedOperation: -2147483648}
 			topicMetadata.PartitionMetadataList = make([]*codec.PartitionMetadata, partitionNum)
 			for i := 0; i < partitionNum; i++ {
