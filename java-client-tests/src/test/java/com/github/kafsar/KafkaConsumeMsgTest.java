@@ -114,17 +114,16 @@ public class KafkaConsumeMsgTest extends BaseTest {
 
         Consumer<String, String> consumer = new KafkaConsumer<>(props);
         consumer.subscribe(Collections.singletonList(topic));
-        TimeUnit.SECONDS.sleep(5);
+        consumer.poll(Duration.ofSeconds(5));
         CompletableFuture<MessageId> completableFuture = producer.sendAsync(msg + "3");
         TimeUnit.SECONDS.sleep(5);
+        if (completableFuture.isCompletedExceptionally()) {
+            throw new Exception("send pulsar message 3 failed");
+        }
         while (true) {
-            if (completableFuture.isCompletedExceptionally()) {
-                throw new Exception("send pulsar message 3 failed");
-            }
             ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
-            if (consumerRecords.count() == 0) {
+            if (consumerRecords.isEmpty()) {
                 TimeUnit.MILLISECONDS.sleep(200);
-                continue;
             }
             ConsumerRecord<String, String> consumerRecord = consumerRecords.iterator().next();
             log.info("record value is {} offset is {}", consumerRecord.value(), consumerRecord.offset());
@@ -156,7 +155,12 @@ public class KafkaConsumeMsgTest extends BaseTest {
 
         Consumer<String, String> consumer = new KafkaConsumer<>(props);
         consumer.subscribe(Collections.singletonList(topic));
+        consumer.poll(Duration.ofSeconds(5));
+        CompletableFuture<MessageId> completableFuture = producer.sendAsync(msg + "3");
         TimeUnit.SECONDS.sleep(5);
+        if (completableFuture.isCompletedExceptionally()) {
+            throw new Exception("send pulsar message 3 failed");
+        }
         while (true) {
             ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
             if (consumerRecords.count() == 0) {
@@ -165,7 +169,7 @@ public class KafkaConsumeMsgTest extends BaseTest {
             }
             ConsumerRecord<String, String> consumerRecord = consumerRecords.iterator().next();
             log.info("record value is {} offset is {}", consumerRecord.value(), consumerRecord.offset());
-            Assertions.assertEquals(msg + "2", consumerRecord.value());
+            Assertions.assertEquals(msg + "3", consumerRecord.value());
             consumer.commitSync();
             break;
         }
@@ -255,6 +259,7 @@ public class KafkaConsumeMsgTest extends BaseTest {
     public void multiConsumerTest() throws Exception {
         String topic = UUID.randomUUID().toString();
         ProducerBuilder<String> producerBuilder = pulsarClient.newProducer(Schema.STRING).enableBatching(false);
+        pulsarAdmin.topics().createPartitionedTopic("public/default/" + topic, 2);
         Producer<String> producer = producerBuilder.topic(topic).create();
         String msg = UUID.randomUUID().toString();
         producer.send(msg);
@@ -274,12 +279,12 @@ public class KafkaConsumeMsgTest extends BaseTest {
         Consumer<String, String> consumer1 = new KafkaConsumer<>(props);
         Consumer<String, String> consumer2 = new KafkaConsumer<>(props);
 
-        new Thread(() -> consumer1.subscribe(Collections.singletonList(topic))).start();
-        new Thread(() -> consumer2.subscribe(Collections.singletonList(topic))).start();
-
+        consumer1.subscribe(Collections.singletonList(topic));
+        consumer2.subscribe(Collections.singletonList(topic));
+        consumer2.poll(Duration.ofSeconds(5));
         TimeUnit.SECONDS.sleep(1);
-
         while (true) {
+            producer.send(msg);
             ConsumerRecords<String, String> consumerRecords = consumer2.poll(Duration.ofSeconds(1));
             if (consumerRecords.isEmpty()) {
                 TimeUnit.MILLISECONDS.sleep(200);
@@ -374,14 +379,18 @@ public class KafkaConsumeMsgTest extends BaseTest {
         consumer1.subscribe(Collections.singletonList(topic));
         TimeUnit.SECONDS.sleep(1);
 
+        int msgCount = 0;
         while (true) {
             ConsumerRecords<String, String> consumerRecords = consumer1.poll(Duration.ofSeconds(1));
             if (consumerRecords.isEmpty()) {
                 continue;
             }
-            Assertions.assertEquals(6, consumerRecords.count());
-            break;
+            msgCount += consumerRecords.count();
+            if (msgCount == 6) {
+                break;
+            }
         }
+        Assertions.assertEquals(6, msgCount);
     }
 
     @AfterAll

@@ -346,12 +346,12 @@ func TestFetchOffsetAndOffsetCommit(t *testing.T) {
 	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, maxFetchRecord, len(fetchPartitionResp.RecordBatch.Records))
-	offset = int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
 	assert.Equal(t, string(message.Payload), string(fetchPartitionResp.RecordBatch.Records[0].Value))
 
 	fetchPartitionResp = k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, minBytes, 2000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
-	assert.Equal(t, 0, len(fetchPartitionResp.RecordBatch.Records))
+	assert.Equal(t, 1, len(fetchPartitionResp.RecordBatch.Records))
+	offset = int64(fetchPartitionResp.RecordBatch.Records[0].RelativeOffset) + fetchPartitionResp.RecordBatch.Offset
 
 	// offset commit
 	offsetCommitPartitionReq = codec.OffsetCommitPartitionReq{
@@ -840,7 +840,7 @@ func TestMaxBytesMsg(t *testing.T) {
 		FetchOffset: offsetFetchPartitionResp.Offset,
 	}
 	testMinBytes := 1
-	maxBytes := 15
+	maxBytes := 500
 	fetchPartitionResp := k.FetchPartition(&addr, topic, clientId, &fetchPartitionReq, maxBytes, testMinBytes, 5000, LocalSpan{})
 	assert.Equal(t, codec.NONE, fetchPartitionResp.ErrorCode)
 	assert.Equal(t, 2, len(fetchPartitionResp.RecordBatch.Records))

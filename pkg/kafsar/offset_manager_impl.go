@@ -215,7 +215,7 @@ func getOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consum
 		ReadCompacted:               true,
 	})
 	if err != nil {
-		logrus.Errorf("subscribe reader failed. topic: %s, err: %s", offsetTopic, err)
+		logrus.Errorf("subscribe consumer failed. topic: %s, err: %s", offsetTopic, err)
 		return nil, err
 	}
 	return consumer, nil

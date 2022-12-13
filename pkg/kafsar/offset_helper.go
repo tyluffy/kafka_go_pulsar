@@ -27,9 +27,9 @@ func convOffset(message pulsar.Message, continuousOffset bool) int64 {
 	if continuousOffset {
 		index := message.Index()
 		if index == nil {
-			panic("continuous offset mode, index field must be set")
+			panic(any("continuous offset mode, index field must be set"))
 		}
-		return int64(*index)
+		return int64(*index) + 1
 	}
 	return ConvertMsgId(message.ID())
 }

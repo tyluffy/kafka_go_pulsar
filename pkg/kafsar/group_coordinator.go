@@ -52,10 +52,10 @@ type memberMetadata struct {
 	syncGenerationId int
 }
 
-type ReaderMetadata struct {
+type ConsumerMetadata struct {
 	groupId    string
-	channel    chan pulsar.ReaderMessage
-	reader     pulsar.Reader
+	channel    chan pulsar.ConsumerMessage
+	consumer   pulsar.Consumer
 	messageIds *list.List
 	mutex      sync.RWMutex
 }

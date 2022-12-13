@@ -43,7 +43,7 @@ type Broker struct {
 	pulsarClientManage map[string]pulsar.Client
 	groupCoordinator   GroupCoordinator
 	kafsarConfig       KafsarConfig
-	readerManager      map[string]*ReaderMetadata
+	consumerManager    map[string]*ConsumerMetadata
 	mutex              sync.RWMutex
 	userInfoManager    map[string]*userInfo
 	offsetManager      OffsetManager
@@ -99,7 +99,7 @@ func NewKafsar(impl Server, config *Config) (*Broker, error) {
 		return nil, errors.Errorf("unexpect GroupCoordinatorType: %v", broker.kafsarConfig.GroupCoordinatorType)
 	}
 	broker.pulsarCommonClient = pulsarClient
-	broker.readerManager = make(map[string]*ReaderMetadata)
+	broker.consumerManager = make(map[string]*ConsumerMetadata)
 	broker.userInfoManager = make(map[string]*userInfo)
 	broker.memberManager = make(map[string]*MemberInfo)
 	broker.pulsarClientManage = make(map[string]pulsar.Client)
@@ -242,7 +242,7 @@ func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req 
 		}
 	}
 	b.mutex.RLock()
-	readerMetadata, exist := b.readerManager[partitionedTopic+clientID]
+	consumerMetadata, exist := b.consumerManager[partitionedTopic+clientID]
 	if !exist {
 		groupId, exist := b.topicGroupManager[partitionedTopic]
 		b.mutex.RUnlock()
@@ -260,7 +260,7 @@ func (b *Broker) FetchPartition(addr net.Addr, kafkaTopic, clientID string, req 
 			}
 		}
 		// Maybe this partition-topic is already assigned to another member
-		logrus.Warnf("can not find reader for topic: %s when fetch partition %s", partitionedTopic, partitionedTopic+clientID)
+		logrus.Warnf("can not find consumer for topic: %s when fetch partition %s", partitionedTopic, partitionedTopic+clientID)
 		return &codec.FetchPartitionResp{
 			LastStableOffset: 0,
 			ErrorCode:        codec.NONE,
@@ -284,14 +284,21 @@ OUT:
 		if !flowControl {
 			break
 		}
-		message, err := readerMetadata.reader.Next(ctx)
+		consumerMetadata.mutex.Lock()
+		message, err := consumerMetadata.consumer.Receive(ctx)
 		if err != nil {
+			consumerMetadata.mutex.Unlock()
 			if ctx.Err() != nil {
 				break OUT
 			}
 			logrus.Errorf("read msg failed. err: %s", err)
 			continue
 		}
+		err = consumerMetadata.consumer.Ack(message)
+		if err != nil {
+			logrus.Errorf("ack msg failed. topic: %s err: %s", kafkaTopic, err)
+		}
+		consumerMetadata.mutex.Unlock()
 		byteLength = byteLength + utils.CalculateMsgLength(message)
 		logrus.Infof("receive msg: %s from %s", message.ID(), message.Topic())
 		offset := convOffset(message, b.kafsarConfig.ContinuousOffset)
@@ -305,15 +312,12 @@ OUT:
 			RelativeOffset: int(relativeOffset),
 		}
 		recordBatch.Records = append(recordBatch.Records, &record)
-		readerMetadata.mutex.Lock()
-		readerMetadata.messageIds.PushBack(MessageIdPair{
+		consumerMetadata.mutex.Lock()
+		consumerMetadata.messageIds.PushBack(MessageIdPair{
 			MessageId: message.ID(),
 			Offset:    offset,
 		})
-		readerMetadata.mutex.Unlock()
-		if byteLength > minBytes && time.Since(start).Milliseconds() >= int64(b.kafsarConfig.MinFetchWaitMs) {
-			break
-		}
+		consumerMetadata.mutex.Unlock()
 		if byteLength > maxBytes {
 			break
 		}
@@ -416,12 +420,14 @@ func (b *Broker) GroupLeave(addr net.Addr, req *codec.LeaveGroupReq) (*codec.Lea
 	}
 	for _, topic := range group.partitionedTopic {
 		b.mutex.Lock()
-		readerMetadata, exist := b.readerManager[topic+req.ClientId]
+		consumerMetadata, exist := b.consumerManager[topic+req.ClientId]
 		if exist {
-			readerMetadata.reader.Close()
-			logrus.Infof("success close reader topic: %s", group.partitionedTopic)
-			delete(b.readerManager, topic+req.ClientId)
-			readerMetadata = nil
+			consumerMetadata.mutex.Lock()
+			consumerMetadata.consumer.Close()
+			consumerMetadata.mutex.Unlock()
+			logrus.Infof("success close consumer topic: %s", group.partitionedTopic)
+			delete(b.consumerManager, topic+req.ClientId)
+			consumerMetadata = nil
 		}
 		client, exist := b.pulsarClientManage[topic+req.ClientId]
 		if exist {
@@ -501,7 +507,7 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 			Timestamp:   constant.TimeEarliest,
 		}, nil
 	}
-	readerMessages, exist := b.readerManager[partitionedTopic+clientID]
+	consumerMessages, exist := b.consumerManager[partitionedTopic+clientID]
 	b.mutex.RUnlock()
 	if !exist {
 		logrus.Errorf("offset list failed, topic: %s, does not exist", partitionedTopic)
@@ -529,7 +535,9 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 			}, nil
 		}
 		if lastedMsg != nil {
-			err := readerMessages.reader.Seek(lastedMsg.ID())
+			consumerMessages.mutex.Lock()
+			err := consumerMessages.consumer.Seek(lastedMsg.ID())
+			consumerMessages.mutex.Unlock()
 			if err != nil {
 				logrus.Errorf("offset list failed, topic: %s, err: %s", partitionedTopic, err)
 				return &codec.ListOffsetsPartitionResp{
@@ -537,7 +545,7 @@ func (b *Broker) OffsetListPartition(addr net.Addr, kafkaTopic, clientID string,
 					ErrorCode:   codec.UNKNOWN_SERVER_ERROR,
 				}, nil
 			}
-			offset = convOffset(lastedMsg, b.kafsarConfig.ContinuousOffset)
+			offset = convOffset(lastedMsg, b.kafsarConfig.ContinuousOffset) + 1
 		}
 	}
 	return &codec.ListOffsetsPartitionResp{
@@ -567,7 +575,7 @@ func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic, clientID strin
 		}, nil
 	}
 	b.mutex.RLock()
-	readerMessages, exist := b.readerManager[partitionedTopic+clientID]
+	consumerMessages, exist := b.consumerManager[partitionedTopic+clientID]
 	if !exist {
 		groupId, exist := b.topicGroupManager[partitionedTopic]
 		b.mutex.RUnlock()
@@ -582,20 +590,20 @@ func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic, clientID strin
 		return &codec.OffsetCommitPartitionResp{ErrorCode: codec.REBALANCE_IN_PROGRESS}, nil
 	}
 	b.mutex.RUnlock()
-	readerMessages.mutex.RLock()
-	length := readerMessages.messageIds.Len()
-	readerMessages.mutex.RUnlock()
+	consumerMessages.mutex.RLock()
+	length := consumerMessages.messageIds.Len()
+	consumerMessages.mutex.RUnlock()
 	for i := 0; i < length; i++ {
-		readerMessages.mutex.RLock()
-		front := readerMessages.messageIds.Front()
-		readerMessages.mutex.RUnlock()
+		consumerMessages.mutex.RLock()
+		front := consumerMessages.messageIds.Front()
+		consumerMessages.mutex.RUnlock()
 		if front == nil {
 			break
 		}
 		messageIdPair := front.Value.(MessageIdPair)
 		// kafka commit offset maybe greater than current offset
 		if messageIdPair.Offset == req.Offset || ((messageIdPair.Offset < req.Offset) && (i == length-1)) {
-			err := b.offsetManager.CommitOffset(user.username, kafkaTopic, readerMessages.groupId, req.PartitionId, messageIdPair)
+			err := b.offsetManager.CommitOffset(user.username, kafkaTopic, consumerMessages.groupId, req.PartitionId, messageIdPair)
 			if err != nil {
 				logrus.Errorf("commit offset failed. topic: %s, err: %s", kafkaTopic, err)
 				return &codec.OffsetCommitPartitionResp{
@@ -604,17 +612,17 @@ func (b *Broker) OffsetCommitPartition(addr net.Addr, kafkaTopic, clientID strin
 				}, nil
 			}
 			logrus.Infof("ack pulsar %s for %s", partitionedTopic, messageIdPair.MessageId)
-			readerMessages.mutex.Lock()
-			readerMessages.messageIds.Remove(front)
-			readerMessages.mutex.Unlock()
+			consumerMessages.mutex.Lock()
+			consumerMessages.messageIds.Remove(front)
+			consumerMessages.mutex.Unlock()
 			break
 		}
 		if messageIdPair.Offset > req.Offset {
 			break
 		}
-		readerMessages.mutex.Lock()
-		readerMessages.messageIds.Remove(front)
-		readerMessages.mutex.Unlock()
+		consumerMessages.mutex.Lock()
+		consumerMessages.messageIds.Remove(front)
+		consumerMessages.mutex.Unlock()
 	}
 	return &codec.OffsetCommitPartitionResp{
 		PartitionId: req.PartitionId,
@@ -651,16 +659,16 @@ func (b *Broker) OffsetFetch(addr net.Addr, topic, clientID, groupID string, req
 	messageId := pulsar.EarliestMessageID()
 	kafkaOffset := constant.UnknownOffset
 	if flag {
-		kafkaOffset = messagePair.Offset
+		kafkaOffset = messagePair.Offset + 1
 		messageId = messagePair.MessageId
 	}
 	b.mutex.RLock()
-	_, exist = b.readerManager[partitionedTopic+clientID]
+	_, exist = b.consumerManager[partitionedTopic+clientID]
 	b.mutex.RUnlock()
 	if !exist {
 		b.mutex.Lock()
-		metadata := ReaderMetadata{groupId: groupID, messageIds: list.New()}
-		channel, reader, err := b.createReader(partitionedTopic, subscriptionName, messageId, clientID)
+		metadata := ConsumerMetadata{groupId: groupID, messageIds: list.New()}
+		channel, consumer, err := b.createConsumer(partitionedTopic, subscriptionName, messageId, clientID)
 		if err != nil {
 			b.mutex.Unlock()
 			logrus.Errorf("%s, create channel failed, error: %s", topic, err)
@@ -668,9 +676,9 @@ func (b *Broker) OffsetFetch(addr net.Addr, topic, clientID, groupID string, req
 				ErrorCode: codec.UNKNOWN_SERVER_ERROR,
 			}, nil
 		}
-		metadata.reader = reader
+		metadata.consumer = consumer
 		metadata.channel = channel
-		b.readerManager[partitionedTopic+clientID] = &metadata
+		b.consumerManager[partitionedTopic+clientID] = &metadata
 		b.mutex.Unlock()
 	}
 	group, err := b.groupCoordinator.GetGroup(user.username, groupID)
@@ -841,7 +849,7 @@ func (b *Broker) GetOffsetManager() OffsetManager {
 	return b.offsetManager
 }
 
-func (b *Broker) createReader(partitionedTopic string, subscriptionName string, messageId pulsar.MessageID, clientId string) (chan pulsar.ReaderMessage, pulsar.Reader, error) {
+func (b *Broker) createConsumer(partitionedTopic string, subscriptionName string, messageId pulsar.MessageID, clientId string) (chan pulsar.ConsumerMessage, pulsar.Consumer, error) {
 	client, exist := b.pulsarClientManage[partitionedTopic+clientId]
 	if !exist {
 		var err error
@@ -853,20 +861,27 @@ func (b *Broker) createReader(partitionedTopic string, subscriptionName string, 
 		}
 		b.pulsarClientManage[partitionedTopic+clientId] = client
 	}
-	channel := make(chan pulsar.ReaderMessage, b.kafsarConfig.ConsumerReceiveQueueSize)
-	options := pulsar.ReaderOptions{
-		Topic:             partitionedTopic,
-		Name:              subscriptionName,
-		SubscriptionName:  subscriptionName,
-		StartMessageID:    messageId,
-		MessageChannel:    channel,
-		ReceiverQueueSize: b.kafsarConfig.ConsumerReceiveQueueSize,
+	channel := make(chan pulsar.ConsumerMessage, b.kafsarConfig.ConsumerReceiveQueueSize)
+	options := pulsar.ConsumerOptions{
+		Topic:                       partitionedTopic,
+		Name:                        subscriptionName,
+		SubscriptionName:            subscriptionName,
+		Type:                        pulsar.Failover,
+		SubscriptionInitialPosition: pulsar.SubscriptionPositionEarliest,
+		MessageChannel:              channel,
+		ReceiverQueueSize:           b.kafsarConfig.ConsumerReceiveQueueSize,
 	}
-	reader, err := client.CreateReader(options)
+	consumer, err := client.Subscribe(options)
 	if err != nil {
+		logrus.Warningf("subscribe consumer failed. topic: %s, err: %s", partitionedTopic, err)
 		return nil, nil, err
 	}
-	return channel, reader, nil
+	err = consumer.Seek(messageId)
+	if err != nil {
+		consumer.Close()
+		logrus.Warningf("seek message failed. topic: %s, err: %s", partitionedTopic, err)
+	}
+	return channel, consumer, nil
 }
 
 func (b *Broker) HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.HeartbeatResp {
@@ -888,12 +903,12 @@ func (b *Broker) HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.Heartbe
 		}
 		for _, topic := range group.partitionedTopic {
 			b.mutex.Lock()
-			readerMetadata, exist := b.readerManager[topic+req.ClientId]
+			consumerMetadata, exist := b.consumerManager[topic+req.ClientId]
 			if exist {
-				readerMetadata.reader.Close()
-				logrus.Infof("success close reader topic by heartbeat rebalance: %s", group.partitionedTopic)
-				delete(b.readerManager, topic+req.ClientId)
-				readerMetadata = nil
+				consumerMetadata.consumer.Close()
+				logrus.Infof("success close consumer topic by heartbeat rebalance: %s", group.partitionedTopic)
+				delete(b.consumerManager, topic+req.ClientId)
+				consumerMetadata = nil
 			}
 			client, exist := b.pulsarClientManage[topic+req.ClientId]
 			if exist {

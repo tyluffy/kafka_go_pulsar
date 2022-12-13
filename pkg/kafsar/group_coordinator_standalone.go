@@ -339,7 +339,7 @@ func (g *GroupCoordinatorStandalone) HandleLeaveGroup(username, groupId string,
 			g.setMemberLeader(group, "")
 		}
 		g.deleteMember(group, members[i].MemberId)
-		logrus.Infof("reader member: %s success leave group: %s", members[i].MemberId, groupId)
+		logrus.Infof("consumer member: %s success leave group: %s", members[i].MemberId, groupId)
 	}
 	group.groupLock.Lock()
 	group.generationId++
