@@ -203,6 +203,29 @@ func (o *OffsetManagerImpl) GenerateKey(username, kafkaTopic, groupId string, pa
 	return username + kafkaTopic + groupId + strconv.Itoa(partition)
 }
 
+func (o *OffsetManagerImpl) RemoveOffsetWithKey(key string) {
+	value, exist := o.offsetMap[key]
+	if !exist {
+		logrus.Warnf("key is not exist in offset map. key: %s", key)
+		return
+	}
+	o.mutex.Lock()
+	delete(o.offsetMap, key)
+	o.mutex.Unlock()
+	message := pulsar.ProducerMessage{}
+	message.Key = key
+	_, err := o.producer.Send(context.TODO(), &message)
+	if err != nil {
+		logrus.Warningf("remove offset failed. key: %s, err: %s", key, err)
+		return
+	}
+	logrus.Infof("remove offset success. key: %s, offset: %d", key, value.Offset)
+}
+
+func (o *OffsetManagerImpl) GetOffsetMap() map[string]MessageIdPair {
+	return o.offsetMap
+}
+
 func getOffsetConsumer(client pulsar.Client, config KafsarConfig) (pulsar.Consumer, error) {
 	subscribeName := uuid.New().String()
 	logrus.Infof("start offset consume subscribe name %s", subscribeName)
