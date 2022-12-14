@@ -32,6 +32,10 @@ func (k FlowKafsarImpl) AuthTopicGroup(username string, password, clientId, cons
 	return true, nil
 }
 
+func (e FlowKafsarImpl) AuthGroupTopic(topic, groupId string) bool {
+	return true
+}
+
 func (k FlowKafsarImpl) SubscriptionName(groupId string) (string, error) {
 	return SubscriptionPrefix + groupId, nil
 }

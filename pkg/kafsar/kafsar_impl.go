@@ -780,6 +780,10 @@ func (b *Broker) SaslAuthTopic(addr net.Addr, req codec.SaslAuthenticateReq, top
 	return true, codec.NONE
 }
 
+func (b *Broker) AuthGroupTopic(topic, groupId string) bool {
+	return b.server.AuthGroupTopic(topic, groupId)
+}
+
 func (b *Broker) SaslAuthConsumerGroup(addr net.Addr, req codec.SaslAuthenticateReq, consumerGroup string) (bool, codec.ErrorCode) {
 	auth, err := b.server.AuthTopicGroup(req.Username, req.Password, req.ClientId, consumerGroup)
 	if err != nil || !auth {

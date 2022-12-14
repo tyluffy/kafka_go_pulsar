@@ -24,6 +24,8 @@ type Server interface {
 
 	AuthTopicGroup(username string, password, clientId, consumerGroup string) (bool, error)
 
+	AuthGroupTopic(topic, groupId string) bool
+
 	SubscriptionName(groupId string) (string, error)
 
 	// PulsarTopic the corresponding topic in pulsar

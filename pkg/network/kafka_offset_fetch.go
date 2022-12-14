@@ -36,6 +36,9 @@ func (s *Server) OffsetFetchVersion(ctx *ctx.NetworkContext, req *codec.OffsetFe
 		TopicRespList: make([]*codec.OffsetFetchTopicResp, len(req.TopicReqList)),
 	}
 	for i, topicReq := range req.TopicReqList {
+		if !s.authGroupTopic(topicReq.Topic, req.GroupId) {
+			return nil, gnet.Close
+		}
 		if !s.checkSaslTopic(ctx, topicReq.Topic, CONSUMER_PERMISSION_TYPE) {
 			return nil, gnet.Close
 		}

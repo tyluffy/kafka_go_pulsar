@@ -30,6 +30,10 @@ func (s *Server) checkSasl(ctx *ctx.NetworkContext) bool {
 	return ok
 }
 
+func (s *Server) authGroupTopic(topic, groupId string) bool {
+	return s.kafsarImpl.AuthGroupTopic(topic, groupId)
+}
+
 func (s *Server) checkSaslGroup(ctx *ctx.NetworkContext, groupId string) bool {
 	if !s.kafkaProtocolConfig.NeedSasl {
 		return true

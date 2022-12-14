@@ -38,6 +38,10 @@ func (k KafsarImpl) AuthTopicGroup(username string, password, clientId, consumer
 	return true, nil
 }
 
+func (e KafsarImpl) AuthGroupTopic(topic, groupId string) bool {
+	return true
+}
+
 func (k KafsarImpl) SubscriptionName(groupId string) (string, error) {
 	return SubscriptionPrefix + groupId, nil
 }

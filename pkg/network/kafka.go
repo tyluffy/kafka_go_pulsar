@@ -65,6 +65,8 @@ type KafsarServer interface {
 
 	SaslAuthTopic(addr net.Addr, req codec.SaslAuthenticateReq, topic, permissionType string) (bool, codec.ErrorCode)
 
+	AuthGroupTopic(topic, groupId string) bool
+
 	SaslAuthConsumerGroup(addr net.Addr, req codec.SaslAuthenticateReq, consumerGroup string) (bool, codec.ErrorCode)
 
 	HeartBeat(addr net.Addr, req codec.HeartbeatReq) *codec.HeartbeatResp
