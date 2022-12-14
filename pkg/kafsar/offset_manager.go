@@ -28,5 +28,9 @@ type OffsetManager interface {
 
 	GenerateKey(username, kafkaTopic, groupId string, partition int) string
 
+	RemoveOffsetWithKey(key string)
+
+	GetOffsetMap() map[string]MessageIdPair
+
 	Close()
 }
